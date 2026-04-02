@@ -1,18 +1,13 @@
-import { GoogleGenAI } from "@google/genai";
-import { SCHOLARSHIPS_FROM_CSV } from './scholarshipsData';
+import { GoogleGenAI } from '@google/genai';
+import {
+  SCHOLARSHIPS_FROM_CSV,
+  filterScholarships,
+  Scholarship,
+  ScholarshipFilters,
+  UserProfile,
+} from './scholarshipsData';
 
-interface UserProfile {
-  fullName?: string;
-  email?: string;
-  phone?: string;
-  course: string;
-  category: string;
-  income: string;
-  cgpa: string;
-  careerGoals?: string;
-}
-
-interface SearchFilters {
+interface SearchFilters extends ScholarshipFilters {
   course: string;
   category: string;
   income: string;
@@ -25,281 +20,270 @@ interface AIScholarship {
   id: string;
   title: string;
   description: string;
-  category: string;
+  category: 'Government' | 'Corporate CSR' | 'Private' | 'International';
   reward: string;
   eligibility: string[];
   deadline: string;
   website: string;
   matchScore: number;
-  source: 'ai_research' | 'csv_database';
+  source: 'csv_database' | 'web_retrieval';
   isFeatured?: boolean;
   aiInsight?: string;
+  aiAugmented?: boolean;
   tags: string[];
+  matchedBecause: string[];
 }
 
-// Format CSV scholarships as context for the AI
-function formatCSVContext(): string {
-  return SCHOLARSHIPS_FROM_CSV
-    .slice(0, 15) // Top 15 scholarships from CSV
-    .map((s, i) => `${i + 1}. ${s.title}: ${s.tags.join(', ')}`)
-    .join('\n');
+interface RetrievedWebScholarship {
+  title: string;
+  description: string;
+  reward?: string;
+  deadline?: string;
+  categoryRaw?: string;
+  course?: string;
+  state?: string;
+  maxIncome?: number | null;
+  minCgpa?: number | null;
+  website: string;
+  tags?: string[];
 }
 
-export async function searchScholarshipsWithAI(
+let aiBackoffUntil = 0;
+let hasLoggedMissingApiKey = false;
+let hasLoggedMissingRetrievalEndpoint = false;
+
+function isDevRuntime(): boolean {
+  const viteDev = Boolean((import.meta as any).env?.DEV);
+  const nodeDev = typeof process !== 'undefined' && process.env?.NODE_ENV !== 'production';
+  return viteDev || nodeDev;
+}
+
+function isAIInsightsEnabled(): boolean {
+  const raw = (import.meta as any).env?.VITE_ENABLE_AI_INSIGHTS
+    || (typeof process !== 'undefined' ? process.env?.VITE_ENABLE_AI_INSIGHTS : undefined);
+  if (raw == null || raw === '') return true; // default ON (can be disabled explicitly)
+  return String(raw).toLowerCase() === 'true';
+}
+
+function getRetrievalEndpoint(): string | undefined {
+  return (
+    (import.meta as any).env?.VITE_SCHOLARSHIP_RETRIEVAL_URL ||
+    (typeof process !== 'undefined' ? process.env?.VITE_SCHOLARSHIP_RETRIEVAL_URL : undefined)
+  );
+}
+
+function normalizeKey(title: string, website: string): string {
+  return `${title.toLowerCase().trim()}|${website.toLowerCase().trim()}`;
+}
+
+function toAIScholarship(
+  scholarship: Scholarship & { matchScore: number; matchedBecause: string[] },
+  source: AIScholarship['source'],
+): AIScholarship {
+  return {
+    id: scholarship.id,
+    title: scholarship.title,
+    description: scholarship.description,
+    category: scholarship.category,
+    reward: scholarship.reward,
+    eligibility: scholarship.matchedBecause,
+    deadline: scholarship.deadline,
+    website: scholarship.link || 'https://scholarships.gov.in',
+    matchScore: scholarship.matchScore,
+    source,
+    aiInsight: undefined,
+    tags: scholarship.tags,
+    matchedBecause: scholarship.matchedBecause,
+  };
+}
+
+function mapWebScholarshipsToNormalized(input: RetrievedWebScholarship[]): Scholarship[] {
+  return input.map((item, index) => {
+    const normalizedTitle = item.title.toLowerCase();
+    const normalizedWebsite = item.website.toLowerCase();
+    const isCentral =
+      normalizedWebsite.includes('gov.in') ||
+      normalizedWebsite.includes('nic.in') ||
+      normalizedTitle.includes('national') ||
+      normalizedTitle.includes('central');
+    const scholarshipType = item.state && item.state !== 'All'
+      ? 'State'
+      : isCentral
+        ? 'Central'
+        : 'Private';
+    return {
+      id: `web_${index}_${Math.random().toString(36).slice(2, 8)}`,
+      title: item.title,
+      description: item.description,
+      reward: item.reward || 'Varies',
+      deadline: item.deadline || 'Ongoing',
+      category: scholarshipType === 'Private' ? 'Private' : 'Government',
+      tags: item.tags || [],
+      state: item.state || 'All',
+      link: item.website,
+      maxIncome: item.maxIncome ?? null,
+      minCgpa: item.minCgpa ?? null,
+      course: item.course || 'Any',
+      categoryRaw: item.categoryRaw || 'All',
+      scholarshipType,
+    };
+  });
+}
+
+async function fetchWebScholarships(
   userProfile: Partial<UserProfile>,
-  filters?: SearchFilters
-): Promise<AIScholarship[]> {
+  filters?: SearchFilters,
+): Promise<RetrievedWebScholarship[]> {
+  const endpoint = getRetrievalEndpoint();
+  if (!endpoint) {
+    if (!hasLoggedMissingRetrievalEndpoint && isDevRuntime()) {
+      console.info('Web retrieval endpoint not configured; returning CSV-only results.');
+      hasLoggedMissingRetrievalEndpoint = true;
+    }
+    return [];
+  }
+
   try {
-    const apiKey = process.env.VITE_GEMINI_API_KEY || (import.meta as any).env?.VITE_GEMINI_API_KEY;
-    
-    if (!apiKey || apiKey === '') {
-      console.warn("Gemini API key not configured. Using CSV database only.");
-      return getScholarshipsFromCSV(userProfile, filters);
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userProfile, filters }),
+    });
+
+    if (!response.ok) {
+      console.warn(`Web retrieval failed with status ${response.status}; returning CSV-only results.`);
+      return [];
     }
 
+    const payload = await response.json();
+    if (!Array.isArray(payload)) return [];
+    return payload as RetrievedWebScholarship[];
+  } catch (error) {
+    console.warn('Web retrieval request failed; returning CSV-only results.', error);
+    return [];
+  }
+}
+
+async function generateAIInsights(
+  results: AIScholarship[],
+  userProfile: Partial<UserProfile>,
+): Promise<AIScholarship[]> {
+  if (!isAIInsightsEnabled()) {
+    return results;
+  }
+
+  const safeNodeApiKey = typeof process !== 'undefined' ? process.env?.VITE_GEMINI_API_KEY : undefined;
+  const apiKey = safeNodeApiKey || (import.meta as any).env?.VITE_GEMINI_API_KEY;
+  if (!apiKey) {
+    if (!hasLoggedMissingApiKey) {
+      console.info('Gemini API key not configured; returning deterministic CSV/web results without AI insights.');
+      hasLoggedMissingApiKey = true;
+    }
+    return results;
+  }
+
+  if (Date.now() < aiBackoffUntil) {
+    return results;
+  }
+
+  try {
     const ai = new GoogleGenAI({ apiKey });
 
-    const userContext = `
-User Profile:
-- Course Level: ${userProfile.course || 'Not specified'}
-- Category/Reservation: ${userProfile.category || 'General'}
-- Annual Family Income: ${userProfile.income || 'Not specified'}
-- CGPA/Academic Score: ${userProfile.cgpa || 'Not specified'}
-- Career Goals: ${userProfile.careerGoals || 'Not specified'}
-
-Search Filters:
-- Scholarship Type: ${filters?.type || 'All'}
-- Tags: ${filters?.tags?.join(', ') || 'None'}
-`;
-
-    const csvContext = formatCSVContext();
-
-    const prompt = `You are an expert scholarship advisor. Based on the user profile below and the CSV database provided, search for and recommend relevant scholarships.
-
-${userContext}
-
-CSV Database Reference (for context):
-${csvContext}
-
-Your task:
-1. Search for 10-15 real, current scholarships that match this user's profile
-2. Include scholarships from the CSV database that match
-3. Also research and suggest other major Indian scholarships the user qualifies for
-4. IMPORTANT: When searching, apply the following type filter:
-   - If 'State': Only include State Government scholarships
-   - If 'Central': Only include Central Government and National scholarships
-   - If 'Private': Only include Corporate CSR and Private Trust scholarships
-   - If 'All': Include scholarships from all categories
-5. For each scholarship, provide:
-   - Title
-   - Category (Government/Corporate/Private)
-   - Key eligibility criteria
-   - Approximate deadline
-   - Official website/source
-   - Match score (0-100 based on user eligibility)
-
-Consider:
-- Category-based scholarships (SC/ST/OBC/PWD/General)
-- Merit-based scholarships
-- Need-based scholarships (income criteria)
-- Course-specific scholarships
-- State/Central government scholarships
-- Corporate CSR scholarships
-
-Return ONLY a valid JSON array of scholarships in this format:
-[
-  {
-    "title": "Scholarship Name",
-    "description": "Brief description",
-    "category": "Government/Corporate CSR/Private",
-    "eligibility": ["Criterion 1", "Criterion 2"],
-    "deadline": "DD-MMM-YYYY or 'Ongoing'",
-    "website": "https://example.com",
-    "matchScore": 85,
-    "source": "ai_research"
-  }
-]
-
-Make sure the JSON is valid and parseable.`;
+    const top = results.slice(0, 5);
+    const prompt = `Generate a one-line recommendation reason per scholarship for this user profile.
+User profile: ${JSON.stringify(userProfile)}
+Scholarships: ${JSON.stringify(top.map(s => ({ title: s.title, matchedBecause: s.matchedBecause })))}
+Return JSON array with: [{"title":"...","aiInsight":"..."}]`;
 
     const response = await ai.models.generateContent({
-      model: "gemini-2.0-flash",
+      model: 'gemini-2.0-flash',
       contents: prompt,
-      config: { responseMimeType: "application/json" }
+      config: { responseMimeType: 'application/json' },
     });
 
-    try {
-      const recommendations = JSON.parse(response.text);
-      
-      // Ensure all items have required fields
-      return (Array.isArray(recommendations) ? recommendations : [recommendations])
-        .map((s, idx) => ({
-          id: s.id || generateId(),
-          title: s.title || 'Untitled Scholarship',
-          description: s.description || s.eligibility?.join(', ') || 'A scholarship opportunity',
-          category: s.category || 'Government',
-          reward: s.reward || '₹50,000 - ₹2,00,000',
-          eligibility: s.eligibility || [],
-          deadline: s.deadline || 'Ongoing',
-          website: s.website || 'https://scholarships.gov.in',
-          matchScore: Math.min(100, Math.max(0, s.matchScore || 70)),
-          source: 'ai_research' as const,
-          isFeatured: idx === 0,
-          aiInsight: `This scholarship aligns with your ${userProfile.course || 'academic'} profile and ${userProfile.category || 'background'}.`,
-          tags: s.tags || []
-        }))
-        .sort((a, b) => b.matchScore - a.matchScore)
-        .slice(0, 20); // Limit to top 20
-    } catch (parseError) {
-      console.error("Failed to parse AI response:", parseError);
-      return getScholarshipsFromCSV(userProfile, filters);
-    }
+    const insights = JSON.parse(response.text) as Array<{ title: string; aiInsight: string }>;
+    const map = new Map(insights.map(item => [item.title.trim().toLowerCase(), item.aiInsight]));
+
+    return results.map((result) => {
+      const aiInsight = map.get(result.title.trim().toLowerCase());
+      return {
+        ...result,
+        aiInsight:
+          aiInsight ||
+          `Matched for your ${userProfile.course || 'academic'} profile (${result.matchedBecause.join(', ')}).`,
+        aiAugmented: Boolean(aiInsight),
+      };
+    });
   } catch (error) {
-    console.error("AI scholarship search failed:", error);
-    // Fallback to CSV database
-    return getScholarshipsFromCSV(userProfile, filters);
+    const errorText = String((error as any)?.message || error || '');
+    const isQuotaError =
+      errorText.includes('429') ||
+      errorText.toLowerCase().includes('quota exceeded') ||
+      errorText.toLowerCase().includes('resource_exhausted');
+
+    if (isQuotaError) {
+      const retrySeconds = Number((errorText.match(/retry in\\s+(\\d+(?:\\.\\d+)?)s/i)?.[1] ?? '60'));
+      aiBackoffUntil = Date.now() + Math.max(30, retrySeconds) * 1000;
+      console.warn(`AI quota exceeded. Falling back to deterministic results until ${new Date(aiBackoffUntil).toISOString()}.`);
+      return results;
+    }
+
+    console.warn('AI insight generation failed; using deterministic output.');
+    return results;
   }
 }
 
-// Helper function to determine scholarship type
-function getScholarshipType(scholarship: any): 'State' | 'Central' | 'Private' {
-  const title = scholarship.title.toLowerCase();
-  
-  // Check if it's a corporate/private scholarship
-  const privateCompanies = ['tata', 'aditya birla', 'google', 'adobe', 'flipkart', 'reliance', 'iocl', 'hdfc', 'lic', 'infosys', 'wipro', 'accenture', 'cognizant'];
-  if (privateCompanies.some(company => title.includes(company))) {
-    return 'Private';
-  }
-  
-  // Check if it's a state program (has state name in scholarship or is state-specific)
-  if (scholarship.state && scholarship.state !== 'All') {
-    return 'State';
-  }
-  
-  // Otherwise categorize as Central if it's a national scheme
-  return 'Central';
-}
-
-// Generate unique ID
-function generateId(): string {
-  return `ai_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-}
-
-// Fallback: Filter scholarships from CSV database
-function getScholarshipsFromCSV(
-  userProfile: Partial<UserProfile>,
-  filters?: SearchFilters
-): AIScholarship[] {
-  return SCHOLARSHIPS_FROM_CSV
-    .filter(s => {
-      // Filter by scholarship type if specified
-      if (filters?.type && filters.type !== 'All') {
-        const scholarshipType = getScholarshipType(s);
-        if (scholarshipType !== filters.type) {
-          return false;
-        }
-      }
-      
-      // Basic filtering based on profile
-      if (userProfile.category && !s.tags.includes(userProfile.category)) {
-        return s.tags.includes('General');
-      }
-      if (userProfile.course && !s.tags.includes(userProfile.course)) {
-        return s.tags.some(tag => tag.includes(userProfile.course || ''));
-      }
-      return true;
-    })
-    .map((s, idx) => ({
-      id: s.id || generateId(),
-      title: s.title,
-      description: s.description,
-      category: s.category,
-      reward: s.reward,
-      eligibility: s.tags.slice(0, 3),
-      deadline: s.deadline,
-      website: 'https://scholarships.gov.in',
-      matchScore: calculateMatchScore(s, userProfile, filters),
-      source: 'csv_database' as const,
-      isFeatured: idx === 0,
-      aiInsight: `Based on CSV database: ${s.title} matches your criteria`,
-      tags: s.tags
-    }))
-    .sort((a, b) => b.matchScore - a.matchScore);
-}
-
-// Calculate match score based on profile alignment
-function calculateMatchScore(
-  scholarship: any,
-  userProfile: Partial<UserProfile>,
-  filters?: SearchFilters
-): number {
-  let score = 50; // Base score
-
-  // Category match
-  if (userProfile.category && scholarship.tags.includes(userProfile.category)) {
-    score += 20;
-  } else if (scholarship.tags.includes('General')) {
-    score += 15;
-  }
-
-  // Course match
-  if (userProfile.course && scholarship.tags.includes(userProfile.course)) {
-    score += 15;
-  }
-
-  // Income match
-  if (userProfile.income && scholarship.tags.includes(userProfile.income)) {
-    score += 10;
-  }
-
-  // Filter tags match
-  if (filters?.tags?.length) {
-    const matchingTags = filters.tags.filter(t => scholarship.tags.includes(t)).length;
-    score += Math.min(matchingTags * 3, 10);
-  }
-
-  return Math.min(100, score);
-}
-
-// Get a mix of AI results and CSV results
 export async function getHybridScholarships(
   userProfile: Partial<UserProfile>,
-  filters?: SearchFilters
+  filters?: SearchFilters,
 ): Promise<AIScholarship[]> {
+  const csvEligible = filterScholarships(SCHOLARSHIPS_FROM_CSV, userProfile, filters).map((item) =>
+    toAIScholarship(item, 'csv_database'),
+  );
+
   try {
-    // Try to get AI recommendations
-    const aiResults = await searchScholarshipsWithAI(userProfile, filters);
-    
-    // Also get CSV results
-    const csvResults = getScholarshipsFromCSV(userProfile, filters);
-    
-    // Merge and deduplicate based on title similarity
+    const webRetrieved = await fetchWebScholarships(userProfile, filters);
+    const webNormalized = mapWebScholarshipsToNormalized(webRetrieved);
+    const webEligible = filterScholarships(webNormalized, userProfile, filters).map((item) =>
+      toAIScholarship(item, 'web_retrieval'),
+    );
+
     const merged: AIScholarship[] = [];
-    const seenTitles = new Set<string>();
-    
-    // Add top AI results first
-    aiResults.slice(0, 12).forEach(s => {
-      const normalizedTitle = s.title.toLowerCase().trim();
-      if (!seenTitles.has(normalizedTitle)) {
-        merged.push(s);
-        seenTitles.add(normalizedTitle);
-      }
+    const seen = new Set<string>();
+
+    for (const item of [...csvEligible, ...webEligible]) {
+      const key = normalizeKey(item.title, item.website);
+      if (seen.has(key)) continue;
+      seen.add(key);
+      merged.push(item);
+    }
+
+    const ranked = merged.sort((a, b) => {
+      if (b.matchScore !== a.matchScore) return b.matchScore - a.matchScore;
+      return a.title.localeCompare(b.title);
     });
-    
-    // Add CSV results that aren't duplicates
-    csvResults.slice(0, 8).forEach(s => {
-      const normalizedTitle = s.title.toLowerCase().trim();
-      if (!seenTitles.has(normalizedTitle)) {
-        merged.push(s);
-        seenTitles.add(normalizedTitle);
-      }
-    });
-    
-    return merged
-      .sort((a, b) => b.matchScore - a.matchScore)
-      .slice(0, 15); // Top 15 combined
+
+    const withInsights = await generateAIInsights(ranked, userProfile);
+
+    if (isDevRuntime()) {
+      console.info('Scholarship search source counts', {
+        csvMatched: csvEligible.length,
+        webFound: webRetrieved.length,
+        webEligible: webEligible.length,
+        finalReturned: withInsights.length,
+      });
+    }
+
+    return withInsights;
   } catch (error) {
-    console.error("Hybrid search failed, using CSV only:", error);
-    return getScholarshipsFromCSV(userProfile, filters);
+    console.error('Hybrid search failed; returning CSV eligibility results only.', error);
+    if (isDevRuntime()) {
+      console.info('Scholarship search source counts', {
+        csvMatched: csvEligible.length,
+        webFound: 0,
+        finalReturned: csvEligible.length,
+      });
+    }
+    return csvEligible;
   }
 }
