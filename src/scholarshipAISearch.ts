@@ -50,6 +50,14 @@ interface RetrievedWebScholarship {
 
 let aiBackoffUntil = 0;
 let hasLoggedMissingApiKey = false;
+let hasLoggedMissingRetrievalEndpoint = false;
+
+function isAIInsightsEnabled(): boolean {
+  const raw = (import.meta as any).env?.VITE_ENABLE_AI_INSIGHTS
+    || (typeof process !== 'undefined' ? process.env?.VITE_ENABLE_AI_INSIGHTS : undefined)
+    || 'false';
+  return String(raw).toLowerCase() === 'true';
+}
 
 function getRetrievalEndpoint(): string | undefined {
   return (
@@ -122,7 +130,10 @@ async function fetchWebScholarships(
 ): Promise<RetrievedWebScholarship[]> {
   const endpoint = getRetrievalEndpoint();
   if (!endpoint) {
-    console.info('Web retrieval endpoint not configured; returning CSV-only results.');
+    if (!hasLoggedMissingRetrievalEndpoint) {
+      console.info('Web retrieval endpoint not configured; returning CSV-only results.');
+      hasLoggedMissingRetrievalEndpoint = true;
+    }
     return [];
   }
 
@@ -151,6 +162,10 @@ async function generateAIInsights(
   results: AIScholarship[],
   userProfile: Partial<UserProfile>,
 ): Promise<AIScholarship[]> {
+  if (!isAIInsightsEnabled()) {
+    return results;
+  }
+
   const safeNodeApiKey = typeof process !== 'undefined' ? process.env?.VITE_GEMINI_API_KEY : undefined;
   const apiKey = safeNodeApiKey || (import.meta as any).env?.VITE_GEMINI_API_KEY;
   if (!apiKey) {
