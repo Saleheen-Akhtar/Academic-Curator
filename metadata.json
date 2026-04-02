@@ -1,0 +1,5 @@
+{
+  "name": "The Academic Curator",
+  "description": "AI-Powered Scholarship Finder for Indian Students with bilingual support (EN/KN) and career guidance.",
+  "requestFramePermissions": ["microphone"]
+}

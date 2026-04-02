@@ -1,0 +1,58 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "User's personal and academic profile details",
+      "type": "object",
+      "properties": {
+        "fullName": { "type": "string", "description": "User's full name" },
+        "email": { "type": "string", "format": "email", "description": "User's email address" },
+        "phone": { "type": "string", "description": "User's phone number" },
+        "course": { "type": "string", "description": "Current course level" },
+        "category": { "type": "string", "description": "User category (General, OBC, etc.)" },
+        "income": { "type": "string", "description": "Annual income range" },
+        "cgpa": { "type": "string", "description": "Current CGPA or percentage" },
+        "careerGoals": { "type": "string", "description": "User's career ambitions" }
+      },
+      "required": ["fullName", "email"]
+    },
+    "SavedScholarship": {
+      "title": "SavedScholarship",
+      "description": "A scholarship bookmarked by the user",
+      "type": "object",
+      "properties": {
+        "scholarshipId": { "type": "string", "description": "The ID of the scholarship" },
+        "savedAt": { "type": "string", "format": "date-time", "description": "When the scholarship was saved" }
+      },
+      "required": ["scholarshipId", "savedAt"]
+    },
+    "Notification": {
+      "title": "Notification",
+      "description": "App notification for the user",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "message": { "type": "string" },
+        "type": { "type": "string", "enum": ["new", "deadline", "status"] },
+        "date": { "type": "string" },
+        "read": { "type": "boolean" }
+      },
+      "required": ["id", "title", "message", "type", "date", "read"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "User profile document"
+    },
+    "/users/{userId}/savedScholarships/{scholarshipId}": {
+      "schema": "SavedScholarship",
+      "description": "Collection of scholarships saved by the user"
+    },
+    "/users/{userId}/notifications/{notificationId}": {
+      "schema": "Notification",
+      "description": "Collection of user notifications"
+    }
+  }
+}

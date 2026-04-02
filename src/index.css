@@ -1,0 +1,149 @@
+@import "tailwindcss";
+
+@theme {
+  --font-headline: "Manrope", sans-serif;
+  --font-body: "Inter", sans-serif;
+  --font-label: "Inter", sans-serif;
+
+  --color-on-error: #ffffff;
+  --color-tertiary-fixed: #ffe088;
+  --color-on-tertiary: #ffffff;
+  --color-primary-fixed: #d3e4ff;
+  --color-on-surface-variant: #424750;
+  --color-error: #ba1a1a;
+  --color-surface-container-lowest: #ffffff;
+  --color-on-background: #131b2e;
+  --color-on-primary-container: #8abcff;
+  --color-on-tertiary-container: #4f3e00;
+  --color-on-primary: #ffffff;
+  --color-background: #faf8ff;
+  --color-primary-fixed-dim: #a3c9ff;
+  --color-tertiary: #735c00;
+  --color-on-tertiary-fixed: #241a00;
+  --color-surface-variant: #dae2fd;
+  --color-inverse-primary: #a3c9ff;
+  --color-secondary: #006a6a;
+  --color-inverse-surface: #283044;
+  --color-on-surface: #131b2e;
+  --color-surface: #faf8ff;
+  --color-primary-container: #004b87;
+  --color-secondary-fixed: #93f2f2;
+  --color-primary: #003461;
+  --color-tertiary-container: #cca830;
+  --color-on-secondary-container: #006e6e;
+  --color-surface-tint: #27609d;
+  --color-on-primary-fixed: #001c38;
+  --color-on-secondary: #ffffff;
+  --color-inverse-on-surface: #eef0ff;
+  --color-on-secondary-fixed-variant: #004f4f;
+  --color-surface-dim: #d2d9f4;
+  --color-error-container: #ffdad6;
+  --color-surface-bright: #faf8ff;
+  --color-surface-container-high: #e2e7ff;
+  --color-tertiary-fixed-dim: #e9c349;
+  --color-surface-container: #eaedff;
+  --color-secondary-container: #90efef;
+  --color-on-error-container: #93000a;
+  --color-outline-variant: #c2c6d1;
+  --color-on-tertiary-fixed-variant: #574500;
+  --color-surface-container-highest: #dae2fd;
+  --color-outline: #727781;
+  --color-on-primary-fixed-variant: #004882;
+  --color-surface-container-low: #f2f3ff;
+  --color-secondary-fixed-dim: #76d6d5;
+  --color-on-secondary-fixed: #002020;
+}
+
+@layer base {
+  body {
+    @apply bg-surface text-on-surface font-body transition-colors duration-300;
+  }
+
+  .dark {
+    --color-on-error: #ffdad6;
+    --color-tertiary-fixed: #4f3e00;
+    --color-on-tertiary: #3a2e00;
+    --color-primary-fixed: #004b87;
+    --color-on-surface-variant: #c2c6d1;
+    --color-error: #ffb4ab;
+    --color-surface-container-lowest: #0b111e;
+    --color-on-background: #eef0ff;
+    --color-on-primary-container: #d3e4ff;
+    --color-on-tertiary-container: #ffe088;
+    --color-on-primary: #003461;
+    --color-background: #0b111e;
+    --color-primary-fixed-dim: #003461;
+    --color-tertiary: #e9c349;
+    --color-on-tertiary-fixed: #ffe088;
+    --color-surface-variant: #283044;
+    --color-inverse-primary: #0060a8;
+    --color-secondary: #76d6d5;
+    --color-inverse-surface: #faf8ff;
+    --color-on-surface: #eef0ff;
+    --color-surface: #0b111e;
+    --color-primary-container: #a3c9ff;
+    --color-secondary-fixed: #004f4f;
+    --color-primary: #a3c9ff;
+    --color-tertiary-container: #574500;
+    --color-on-secondary-container: #93f2f2;
+    --color-surface-tint: #a3c9ff;
+    --color-on-primary-fixed: #d3e4ff;
+    --color-on-secondary: #003737;
+    --color-inverse-on-surface: #131b2e;
+    --color-on-secondary-fixed-variant: #93f2f2;
+    --color-surface-dim: #0b111e;
+    --color-error-container: #93000a;
+    --color-surface-bright: #343a4d;
+    --color-surface-container-high: #1c2335;
+    --color-tertiary-fixed-dim: #735c00;
+    --color-surface-container: #131b2e;
+    --color-secondary-container: #004f4f;
+    --color-on-error-container: #ffdad6;
+    --color-outline-variant: #424750;
+    --color-on-tertiary-fixed-variant: #ffe088;
+    --color-surface-container-highest: #283044;
+    --color-outline: #8c919c;
+    --color-on-primary-fixed-variant: #d3e4ff;
+    --color-surface-container-low: #0f1627;
+    --color-secondary-fixed-dim: #003737;
+    --color-on-secondary-fixed: #93f2f2;
+  }
+}
+
+.glass-card {
+  background: rgba(218, 226, 253, 0.6);
+  backdrop-filter: blur(16px);
+}
+
+.ai-pulse-border {
+  position: relative;
+}
+
+.ai-pulse-border::after {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  background: linear-gradient(45deg, #003461, #cca830);
+  border-radius: inherit;
+  z-index: -1;
+  opacity: 0.3;
+}
+
+.glass-ai {
+  background: rgba(218, 226, 253, 0.6);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(0, 52, 97, 0.05);
+}
+
+.ai-pulse-glow {
+  box-shadow: 0 0 20px rgba(204, 168, 48, 0.15);
+}
+
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.hide-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
