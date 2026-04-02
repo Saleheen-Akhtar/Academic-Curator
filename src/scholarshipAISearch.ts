@@ -48,6 +48,9 @@ interface RetrievedWebScholarship {
   tags?: string[];
 }
 
+let aiBackoffUntil = 0;
+let hasLoggedMissingApiKey = false;
+
 function getRetrievalEndpoint(): string | undefined {
   return (
     (import.meta as any).env?.VITE_SCHOLARSHIP_RETRIEVAL_URL ||
@@ -150,7 +153,17 @@ async function generateAIInsights(
 ): Promise<AIScholarship[]> {
   const safeNodeApiKey = typeof process !== 'undefined' ? process.env?.VITE_GEMINI_API_KEY : undefined;
   const apiKey = safeNodeApiKey || (import.meta as any).env?.VITE_GEMINI_API_KEY;
-  if (!apiKey) return results;
+  if (!apiKey) {
+    if (!hasLoggedMissingApiKey) {
+      console.info('Gemini API key not configured; returning deterministic CSV/web results without AI insights.');
+      hasLoggedMissingApiKey = true;
+    }
+    return results;
+  }
+
+  if (Date.now() < aiBackoffUntil) {
+    return results;
+  }
 
   try {
     const ai = new GoogleGenAI({ apiKey });
@@ -181,7 +194,20 @@ Return JSON array with: [{"title":"...","aiInsight":"..."}]`;
       };
     });
   } catch (error) {
-    console.warn('AI insight generation failed; using deterministic output.', error);
+    const errorText = String((error as any)?.message || error || '');
+    const isQuotaError =
+      errorText.includes('429') ||
+      errorText.toLowerCase().includes('quota exceeded') ||
+      errorText.toLowerCase().includes('resource_exhausted');
+
+    if (isQuotaError) {
+      const retrySeconds = Number((errorText.match(/retry in\\s+(\\d+(?:\\.\\d+)?)s/i)?.[1] ?? '60'));
+      aiBackoffUntil = Date.now() + Math.max(30, retrySeconds) * 1000;
+      console.warn(`AI quota exceeded. Falling back to deterministic results until ${new Date(aiBackoffUntil).toISOString()}.`);
+      return results;
+    }
+
+    console.warn('AI insight generation failed; using deterministic output.');
     return results;
   }
 }
