@@ -40,12 +40,30 @@ function loadCsvSource(): string {
     return injectedCsv;
   }
 
-  // Node/test runtime: read directly from repository file
   if (typeof window === 'undefined') {
+    try {
+      const req = Function('try { return require; } catch { return null; }')() as
+        | ((id: string) => any)
+        | null;
+      if (req) {
+        const fs = req('node:fs');
+        const path = req('node:path');
+        const csvCandidates = [
+          path.join(process.cwd(), 'scholarships.csv'),
+          path.join(process.cwd(), 'public', 'scholarships.csv'),
+        ];
+        for (const candidate of csvCandidates) {
+          if (fs.existsSync(candidate)) {
+            return fs.readFileSync(candidate, 'utf8');
+          }
+        }
+      }
+    } catch (error) {
+      console.warn('Failed to load scholarships.csv in Node runtime.', error);
+    }
     return '';
   }
 
-  // Browser runtime: load CSV directly from public path
   try {
     const xhr = new XMLHttpRequest();
     xhr.open('GET', '/scholarships.csv', false);

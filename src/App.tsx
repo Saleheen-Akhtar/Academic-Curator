@@ -115,7 +115,7 @@ interface Scholarship {
   aiInsight?: string;
   isFeatured?: boolean;
   tags: string[]; // For filtering
-  source?: 'csv_database' | 'web_retrieval' | 'ai_augmented';
+  source?: 'csv_database' | 'web_retrieval';
   website?: string;
   matchedBecause?: string[];
 }

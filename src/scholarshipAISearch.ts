@@ -26,9 +26,10 @@ interface AIScholarship {
   deadline: string;
   website: string;
   matchScore: number;
-  source: 'csv_database' | 'web_retrieval' | 'ai_augmented';
+  source: 'csv_database' | 'web_retrieval';
   isFeatured?: boolean;
   aiInsight?: string;
+  aiAugmented?: boolean;
   tags: string[];
   matchedBecause: string[];
 }
@@ -48,7 +49,10 @@ interface RetrievedWebScholarship {
 }
 
 function getRetrievalEndpoint(): string | undefined {
-  return (import.meta as any).env?.VITE_SCHOLARSHIP_RETRIEVAL_URL || process.env.VITE_SCHOLARSHIP_RETRIEVAL_URL;
+  return (
+    (import.meta as any).env?.VITE_SCHOLARSHIP_RETRIEVAL_URL ||
+    (typeof process !== 'undefined' ? process.env?.VITE_SCHOLARSHIP_RETRIEVAL_URL : undefined)
+  );
 }
 
 function normalizeKey(title: string, website: string): string {
@@ -78,7 +82,18 @@ function toAIScholarship(
 
 function mapWebScholarshipsToNormalized(input: RetrievedWebScholarship[]): Scholarship[] {
   return input.map((item, index) => {
-    const scholarshipType = item.state && item.state !== 'All' ? 'State' : 'Private';
+    const normalizedTitle = item.title.toLowerCase();
+    const normalizedWebsite = item.website.toLowerCase();
+    const isCentral =
+      normalizedWebsite.includes('gov.in') ||
+      normalizedWebsite.includes('nic.in') ||
+      normalizedTitle.includes('national') ||
+      normalizedTitle.includes('central');
+    const scholarshipType = item.state && item.state !== 'All'
+      ? 'State'
+      : isCentral
+        ? 'Central'
+        : 'Private';
     return {
       id: `web_${index}_${Math.random().toString(36).slice(2, 8)}`,
       title: item.title,
@@ -133,7 +148,8 @@ async function generateAIInsights(
   results: AIScholarship[],
   userProfile: Partial<UserProfile>,
 ): Promise<AIScholarship[]> {
-  const apiKey = process.env.VITE_GEMINI_API_KEY || (import.meta as any).env?.VITE_GEMINI_API_KEY;
+  const safeNodeApiKey = typeof process !== 'undefined' ? process.env?.VITE_GEMINI_API_KEY : undefined;
+  const apiKey = safeNodeApiKey || (import.meta as any).env?.VITE_GEMINI_API_KEY;
   if (!apiKey) return results;
 
   try {
@@ -154,13 +170,16 @@ Return JSON array with: [{"title":"...","aiInsight":"..."}]`;
     const insights = JSON.parse(response.text) as Array<{ title: string; aiInsight: string }>;
     const map = new Map(insights.map(item => [item.title.trim().toLowerCase(), item.aiInsight]));
 
-    return results.map((result, idx) => ({
-      ...result,
-      aiInsight:
-        map.get(result.title.trim().toLowerCase()) ||
-        `Matched for your ${userProfile.course || 'academic'} profile (${result.matchedBecause.join(', ')}).`,
-      source: idx < 5 ? 'ai_augmented' : result.source,
-    }));
+    return results.map((result) => {
+      const aiInsight = map.get(result.title.trim().toLowerCase());
+      return {
+        ...result,
+        aiInsight:
+          aiInsight ||
+          `Matched for your ${userProfile.course || 'academic'} profile (${result.matchedBecause.join(', ')}).`,
+        aiAugmented: Boolean(aiInsight),
+      };
+    });
   } catch (error) {
     console.warn('AI insight generation failed; using deterministic output.', error);
     return results;

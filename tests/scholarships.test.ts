@@ -131,7 +131,7 @@ test('integration: hybrid search returns csv matches even if internet retrieval 
       { course: 'Engineering', category: 'General', income: '< 1L', cgpa: '7+', type: 'All', tags: [] },
     );
     assert.ok(result.length > 0);
-    assert.ok(result.every(item => item.source === 'csv_database' || item.source === 'ai_augmented'));
+    assert.ok(result.every(item => item.source === 'csv_database' || item.source === 'web_retrieval'));
   } finally {
     globalThis.fetch = originalFetch;
     delete process.env.VITE_SCHOLARSHIP_RETRIEVAL_URL;
