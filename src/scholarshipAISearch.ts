@@ -52,10 +52,16 @@ let aiBackoffUntil = 0;
 let hasLoggedMissingApiKey = false;
 let hasLoggedMissingRetrievalEndpoint = false;
 
+function isDevRuntime(): boolean {
+  const viteDev = Boolean((import.meta as any).env?.DEV);
+  const nodeDev = typeof process !== 'undefined' && process.env?.NODE_ENV !== 'production';
+  return viteDev || nodeDev;
+}
+
 function isAIInsightsEnabled(): boolean {
   const raw = (import.meta as any).env?.VITE_ENABLE_AI_INSIGHTS
-    || (typeof process !== 'undefined' ? process.env?.VITE_ENABLE_AI_INSIGHTS : undefined)
-    || 'false';
+    || (typeof process !== 'undefined' ? process.env?.VITE_ENABLE_AI_INSIGHTS : undefined);
+  if (raw == null || raw === '') return true; // default ON (can be disabled explicitly)
   return String(raw).toLowerCase() === 'true';
 }
 
@@ -130,7 +136,7 @@ async function fetchWebScholarships(
 ): Promise<RetrievedWebScholarship[]> {
   const endpoint = getRetrievalEndpoint();
   if (!endpoint) {
-    if (!hasLoggedMissingRetrievalEndpoint) {
+    if (!hasLoggedMissingRetrievalEndpoint && isDevRuntime()) {
       console.info('Web retrieval endpoint not configured; returning CSV-only results.');
       hasLoggedMissingRetrievalEndpoint = true;
     }
@@ -259,21 +265,25 @@ export async function getHybridScholarships(
 
     const withInsights = await generateAIInsights(ranked, userProfile);
 
-    console.info('Scholarship search source counts', {
-      csvMatched: csvEligible.length,
-      webFound: webRetrieved.length,
-      webEligible: webEligible.length,
-      finalReturned: withInsights.length,
-    });
+    if (isDevRuntime()) {
+      console.info('Scholarship search source counts', {
+        csvMatched: csvEligible.length,
+        webFound: webRetrieved.length,
+        webEligible: webEligible.length,
+        finalReturned: withInsights.length,
+      });
+    }
 
     return withInsights;
   } catch (error) {
     console.error('Hybrid search failed; returning CSV eligibility results only.', error);
-    console.info('Scholarship search source counts', {
-      csvMatched: csvEligible.length,
-      webFound: 0,
-      finalReturned: csvEligible.length,
-    });
+    if (isDevRuntime()) {
+      console.info('Scholarship search source counts', {
+        csvMatched: csvEligible.length,
+        webFound: 0,
+        finalReturned: csvEligible.length,
+      });
+    }
     return csvEligible;
   }
 }
