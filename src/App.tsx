@@ -115,6 +115,9 @@ interface Scholarship {
   aiInsight?: string;
   isFeatured?: boolean;
   tags: string[]; // For filtering
+  source?: 'csv_database' | 'web_retrieval' | 'ai_augmented';
+  website?: string;
+  matchedBecause?: string[];
 }
 
 // --- Data ---
@@ -1688,6 +1691,11 @@ const DashboardPage = ({ filters, savedIds, onToggleSave, onSelectScholarship, u
                         AI INSIGHT
                       </p>
                       <p className="text-sm text-on-surface font-medium italic">"{s.aiInsight}"</p>
+                      {!!s.matchedBecause?.length && (
+                        <p className="text-xs text-on-surface-variant mt-2">
+                          Matched because: {s.matchedBecause.join(', ')}
+                        </p>
+                      )}
                     </div>
 
                     <div className="flex justify-between items-end">
