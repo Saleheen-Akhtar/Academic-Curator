@@ -265,6 +265,10 @@ function createMatchedBecause(params: {
   return reasons;
 }
 
+function hasUserInput(value: string | undefined): boolean {
+  return Boolean(value && value.trim().length > 0);
+}
+
 export function getScholarshipsFromCSV(): Scholarship[] {
   const rawData = parseCSV(scholarshipsCsvRaw);
 
@@ -309,21 +313,43 @@ export function filterScholarships(
 
   const eligible = scholarships
     .map((scholarship) => {
+      const categorySpecified = hasUserInput(profile.category);
+      const incomeSpecified = hasUserInput(profile.income);
+      const cgpaSpecified = hasUserInput(profile.cgpa);
+      const courseSpecified = hasUserInput(profile.course);
+
       const categoryOk = categoryMatches(profile.category, scholarship.categoryRaw ?? 'All');
       const incomeOk = incomeEligible(profile.income, scholarship.maxIncome);
       const cgpaOk = cgpaEligible(profile.cgpa, scholarship.minCgpa);
       const courseOk = courseRelevant(profile.course, scholarship.course);
 
-      const isEligible = categoryOk && incomeOk && cgpaOk && courseOk;
+      const failedHardEligibility =
+        (categorySpecified && !categoryOk) ||
+        (incomeSpecified && !incomeOk) ||
+        (cgpaSpecified && !cgpaOk) ||
+        (courseSpecified && !courseOk);
+
+      const isEligible = !failedHardEligibility;
       if (!isEligible) return null;
 
-      const matchScore = computeMatchScore({ categoryOk, incomeOk, cgpaOk, courseOk });
-      const matchedBecause = createMatchedBecause({ categoryOk, incomeOk, cgpaOk, courseOk });
+      const matchScore = computeMatchScore({
+        categoryOk: categorySpecified ? categoryOk : false,
+        incomeOk: incomeSpecified ? incomeOk : false,
+        cgpaOk: cgpaSpecified ? cgpaOk : false,
+        courseOk: courseSpecified ? courseOk : false,
+      });
+
+      const matchedBecause = createMatchedBecause({
+        categoryOk: categorySpecified ? categoryOk : false,
+        incomeOk: incomeSpecified ? incomeOk : false,
+        cgpaOk: cgpaSpecified ? cgpaOk : false,
+        courseOk: courseSpecified ? courseOk : false,
+      });
 
       return {
         ...scholarship,
         matchScore,
-        matchedBecause,
+        matchedBecause: matchedBecause.length > 0 ? matchedBecause : ['General eligibility match'],
       };
     })
     .filter((item): item is Scholarship & { matchScore: number; matchedBecause: string[] } => item !== null);

@@ -91,9 +91,18 @@ function toAIScholarship(
     website: scholarship.link || 'https://scholarships.gov.in',
     matchScore: scholarship.matchScore,
     source,
-    aiInsight: undefined,
+    aiInsight: `Matched based on: ${scholarship.matchedBecause.join(', ')}.`,
     tags: scholarship.tags,
     matchedBecause: scholarship.matchedBecause,
+  };
+}
+
+function toSafeProfile(profile: Partial<UserProfile>): Pick<UserProfile, 'course' | 'category' | 'income' | 'cgpa'> {
+  return {
+    course: profile.course || '',
+    category: profile.category || '',
+    income: profile.income || '',
+    cgpa: profile.cgpa || '',
   };
 }
 
@@ -147,7 +156,7 @@ async function fetchWebScholarships(
     const response = await fetch(endpoint, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ userProfile, filters }),
+      body: JSON.stringify({ userProfile: toSafeProfile(userProfile), filters }),
     });
 
     if (!response.ok) {
@@ -188,10 +197,11 @@ async function generateAIInsights(
 
   try {
     const ai = new GoogleGenAI({ apiKey });
+    const safeProfile = toSafeProfile(userProfile);
 
     const top = results.slice(0, 5);
     const prompt = `Generate a one-line recommendation reason per scholarship for this user profile.
-User profile: ${JSON.stringify(userProfile)}
+User profile: ${JSON.stringify(safeProfile)}
 Scholarships: ${JSON.stringify(top.map(s => ({ title: s.title, matchedBecause: s.matchedBecause })))}
 Return JSON array with: [{"title":"...","aiInsight":"..."}]`;
 
@@ -258,23 +268,33 @@ export async function getHybridScholarships(
       merged.push(item);
     }
 
-    const ranked = merged.sort((a, b) => {
+    const tagFiltered = merged.filter((item) => {
+      if (!filters?.tags?.length) return true;
+      return filters.tags.some(tag => item.tags.includes(tag));
+    });
+
+    const ranked = tagFiltered.sort((a, b) => {
       if (b.matchScore !== a.matchScore) return b.matchScore - a.matchScore;
       return a.title.localeCompare(b.title);
     });
 
     const withInsights = await generateAIInsights(ranked, userProfile);
+    const finalized = withInsights.map((item, idx) => ({
+      ...item,
+      isFeatured: idx < 3,
+      aiInsight: item.aiInsight || `Matched based on: ${item.matchedBecause.join(', ')}.`,
+    }));
 
     if (isDevRuntime()) {
       console.info('Scholarship search source counts', {
         csvMatched: csvEligible.length,
         webFound: webRetrieved.length,
         webEligible: webEligible.length,
-        finalReturned: withInsights.length,
+        finalReturned: finalized.length,
       });
     }
 
-    return withInsights;
+    return finalized;
   } catch (error) {
     console.error('Hybrid search failed; returning CSV eligibility results only.', error);
     if (isDevRuntime()) {
@@ -284,6 +304,10 @@ export async function getHybridScholarships(
         finalReturned: csvEligible.length,
       });
     }
-    return csvEligible;
+    return csvEligible.map((item, idx) => ({
+      ...item,
+      isFeatured: idx < 3,
+      aiInsight: item.aiInsight || `Matched based on: ${item.matchedBecause.join(', ')}.`,
+    }));
   }
 }
