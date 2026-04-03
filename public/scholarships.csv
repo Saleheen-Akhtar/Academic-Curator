@@ -1,33 +1,97 @@
-Name,Category,Income,CGPA,Course,Level,State,Deadline,Link
-NSP Scholarship,All,250000,6,Any,All Levels,All,30-09-2026,https://scholarships.gov.in
-Post Matric Scholarship,SC/ST,250000,5,PUC/Degree,Post-Matric,All,15-10-2026,https://scholarships.gov.in
-Pre Matric Scholarship,SC/ST,250000,5,School,10th,All,15-10-2026,https://scholarships.gov.in
-Merit Cum Means Scholarship,Minority,250000,6,Professional,Engineering/Medical,All,31-10-2026,https://scholarships.gov.in
-Central Sector Scheme,All,800000,8,PUC/Degree,PUC,All,15-09-2026,https://scholarships.gov.in
-INSPIRE Scholarship,All,500000,8.5,Science,PUC/Science,All,31-10-2026,https://online-inspire.gov.in
-AICTE Pragati Scholarship,Girls,800000,6,Engineering,Engineering,All,30-11-2026,https://www.aicte-india.org
-AICTE Saksham Scholarship,Disabled,800000,5,Engineering,Engineering,All,30-11-2026,https://www.aicte-india.org
-Karnataka SSP Scholarship,SC/ST/OBC,200000,5,Any,All Levels,Karnataka,20-09-2026,https://ssp.postmatric.karnataka.gov.in
-Vidyasiri Scholarship,SC/ST/OBC,200000,5,Degree,PUC/Degree,Karnataka,10-10-2026,https://ssp.karnataka.gov.in
-Epass Karnataka,SC/ST,200000,5,Any,All Levels,Karnataka,15-10-2026,https://karepass.cgg.gov.in
-National Means Cum Merit Scholarship,All,150000,5.5,School,10th,All,31-10-2026,https://scholarships.gov.in
-PM Scholarship Scheme,All,600000,6,Professional,Engineering/Medical,All,31-10-2026,https://ksb.gov.in
-LIC Golden Jubilee Scholarship,All,200000,6,Any,PUC/Degree,All,31-10-2026,https://licindia.in
-HDFC Educational Crisis Scholarship,All,250000,5.5,Any,All Levels,All,31-12-2026,https://www.hdfcbank.com
-Tata Scholarship,All,500000,6.5,Any,All Levels,All,30-11-2026,https://www.tatatrusts.org
-Aditya Birla Scholarship,All,600000,7.5,Professional,Engineering,All,15-11-2026,https://www.birla.com
-Sitaram Jindal Scholarship,All,400000,6.5,Any,All Levels,All,30-09-2026,https://www.jsindaltrust.org
-ONGC Scholarship,All,450000,6,Engineering,Engineering,All,31-10-2026,https://ongcindia.com
-Foundation for Excellence,All,300000,7,Engineering,Engineering,All,15-10-2026,https://ffe.org
-Google Generation Scholarship,Girls,No Limit,7,CS/IT,Engineering,All,30-11-2026,https://buildyourfuture.withgoogle.com
-Adobe Women in Tech Scholarship,Girls,No Limit,7,CS/IT,Engineering,All,15-11-2026,https://www.adobe.com
-Flipkart Foundation Scholarship,All,500000,6,Any,PUC/Degree,All,30-10-2026,https://www.flipkartfoundation.org
-Reliance Foundation Scholarship,All,600000,6.5,Any,PUC/Degree,All,30-11-2026,https://www.reliancefoundation.org
-IOCL Scholarship,All,400000,6,Engineering,Engineering,All,31-10-2026,https://iocl.com
-UP Scholarship,All,200000,5,Any,All Levels,Uttar Pradesh,20-10-2026,https://scholarship.up.gov.in
-West Bengal Swami Vivekananda Scholarship,All,250000,6,Any,PUC/Degree,West Bengal,15-11-2026,https://wbmdfc.org
-Maharashtra Scholarship,All,300000,5.5,Any,PUC/Degree,Maharashtra,20-10-2026,https://mahadbtmahait.gov.in
-Telangana Epass,SC/ST/OBC,200000,5,Any,All Levels,Telangana,15-10-2026,https://telanganaepass.cgg.gov.in
-Delhi Scholarship Scheme,All,300000,6,Any,All Levels,Delhi,31-10-2026,https://edudel.nic.in
-Kerala Scholarship,All,300000,5.5,Any,All Levels,Kerala,20-10-2026,https://dcescholarship.kerala.gov.in
-Punjab Scholarship,All,250000,5,Any,All Levels,Punjab,15-10-2026,https://punjabscholarships.gov.in
+Scholarship Name,Course,Category,Annual Income,Current CGPA / %,Scholarship Type,Link,Deadline
+SSP Post Matric Scholarship (Karnataka),UG / PG / Diploma,SC / ST / OBC / EWS / PWD,< 2.5 Lakh,50%+,State Government (SSP),https://ssp.postmatric.karnataka.gov.in,Dec-31
+SSP Pre Matric Scholarship (Karnataka),School,SC / ST / OBC / EWS,< 2 Lakh,50%+,State Government (SSP),https://ssp.prematric.karnataka.gov.in,Nov-30
+Vidyasiri Scholarship (Karnataka SSP),UG / PG,SC / ST / OBC (2A/3A/3B),< 2.5 Lakh,50%+,State Government (SSP),https://ssp.postmatric.karnataka.gov.in,Dec-31
+Fee Reimbursement Scheme (Karnataka SSP),UG / PG / Engineering,SC / ST / OBC / EWS,< 2.5 Lakh,50%+,State Government (SSP),https://ssp.postmatric.karnataka.gov.in,Dec-31
+Karnataka Minority Scholarship (SSP),School / UG / PG,Minority / EWS,< 2 Lakh,50%+,State Government (SSP),https://ssp.karnataka.gov.in,Nov-30
+Karnataka PWD Scholarship (SSP),UG / PG,PWD,< 3 Lakh,50%+,State Government (SSP),https://ssp.karnataka.gov.in,Dec-15
+National Scholarship Portal (NSP CSSS),UG,All / EWS,< 4.5 Lakh,80 percentile,Central Government,https://scholarships.gov.in,Oct-31
+AICTE Pragati Scholarship,Diploma / B.Tech,Girls / EWS,< 8 Lakh,60%+,Central Government,https://www.aicte-india.org,Nov-30
+AICTE Saksham Scholarship,Diploma / B.Tech,PWD,< 8 Lakh,60%+,Central Government,https://www.aicte-india.org,Nov-30
+PM YASASVI Scholarship,10th / 12th,OBC / EWS,< 2.5 Lakh,60%+,Central Government,https://yet.nta.ac.in,Aug-31
+INSPIRE Scholarship,B.Sc / Science,All,No limit,95%+,Central Government,https://online-inspire.gov.in,Oct
+National Scholarship for PWD Students,UG / PG,PWD,< 3 Lakh,50%+,Central Government,https://scholarships.gov.in,Nov-30
+Reliance Foundation Scholarship,UG,All / EWS,< 8.5 Lakh,Merit,Private,https://reliancefoundation.org,Oct
+Tata Capital Pankh Scholarship,School / UG,All / EWS,< 2.5 Lakh,60%+,Private,https://www.buddy4study.com,Sep-30
+HDFC Parivartan ECSS,School / UG / PG,All / EWS,< 2.5 Lakh,55%+,Private,https://www.hdfcbank.com,Dec-31
+Sitaram Jindal Scholarship,All,All / EWS,< 4 Lakh,65%+,Private Trust,https://www.sitaramjindalfoundation.org,Rolling
+Foundation for Excellence (FFE),B.Tech / MBBS,All / EWS,< 3 Lakh,70%+,Private Trust,https://ffe.org,Dec-31
+Legrand Empowering Scholarship,Diploma / UG,Girls / EWS / PWD,< 5 Lakh,60%+,Private,https://www.buddy4study.com,Sep-15
+Kotak Kanya Scholarship,UG,Girls / EWS,< 3 Lakh,75%+,Private,https://kotakeducation.org,Dec-15
+Aditya Birla Scholarship,UG (Top Colleges),All / EWS,No limit,90%+,Private,https://www.adityabirla.com,Sep-15
+Prize Money Scholarship (Karnataka),UG / PG,SC / ST,< 2.5 Lakh,60%+,State Government,https://ssp.postmatric.karnataka.gov.in,Jan-31
+Raitha Vidya Nidhi Scholarship,UG / PG,Farmer / EWS,< 2.5 Lakh,50%+,State Government,https://raitamitra.karnataka.gov.in,Dec-31
+Sanchi Honnamma Scholarship,UG / PG,Girls / EWS,< 2.5 Lakh,50%+,State Government,https://dce.karnataka.gov.in,Nov-30
+Karnataka Merit Scholarship (DCE),UG,All / EWS,< 8 Lakh,85%+,State Government,https://dce.karnataka.gov.in,Oct-31
+Sir C.V. Raman Scholarship,B.Sc,All,< 2.5 Lakh,60%+,State Government,https://dce.karnataka.gov.in,Nov-15
+Prathibha Puraskar Scholarship,10th / 12th,SC / ST,< 2.5 Lakh,90%+,State Government,https://ssp.karnataka.gov.in,Jan-15
+Karnataka Labour Welfare Scholarship,School / UG,Labour Children / EWS,< 3 Lakh,50%+,State Government,https://klwb.karnataka.gov.in,Dec-31
+Karnataka Brahmin Development Board Scholarship,UG / PG,Brahmin / EWS,< 8 Lakh,60%+,State Government,https://ksbdb.karnataka.gov.in,Feb-28
+National Overseas Scholarship,PG / PhD,SC / ST / EWS,< 8 Lakh,60%+,Central Government,https://nosmsje.gov.in,Mar-31
+Top Class Education Scheme (SC),UG,SC,< 8 Lakh,60%+,Central Government,https://scholarships.gov.in,Oct-31
+Top Class Education Scheme (ST),UG,ST,< 6 Lakh,60%+,Central Government,https://scholarships.gov.in,Oct-31
+National Fellowship for ST Students,PhD,ST,< 6 Lakh,55%+,Central Government,https://fellowship.tribal.gov.in,Dec-31
+Maulana Azad National Fellowship,PhD,Minority / EWS,< 6 Lakh,55%+,Central Government,https://ugc.ac.in,Dec-31
+Begum Hazrat Mahal Scholarship,School / UG,Minority Girls,< 2 Lakh,50%+,Central Government,https://scholarships.gov.in,Oct-31
+National Means-cum-Merit (Renewal),School,EWS,< 3.5 Lakh,55%+,Central Government,https://scholarships.gov.in,
+Kind Circle Scholarship,UG / PG,All / EWS,< 6 Lakh,75%+,Private,https://kindcircle.org,Sep-30
+Mahindra All India Talent Scholarship,Diploma,All / EWS,< 2 Lakh,60%+,Private,https://mahindra.com,Jul-31
+Glow & Lovely Scholarship,UG / PG,Girls / EWS,< 6 Lakh,60%+,Private,https://www.buddy4study.com,Sep-30
+L’Oréal India For Young Women in Science,PG / PhD,Girls,No limit,70%+,Private,https://www.foryoungwomeninscience.com,May-15
+Combined Counselling Board Scholarship,UG / PG,All / EWS,< 5 Lakh,50%+,Private,https://ccbnic.in,Sep-15
+SKDRDP Sujnana Nidhi Scholarship (Karnataka),UG / PG,Rural / EWS,< 2.5 Lakh,50%+,Trust,https://skdrdpindia.org,Dec-31
+Vidyadhan Scholarship (Sarojini Damodaran Foundation),11th / UG,EWS,< 2 Lakh,90%+,Trust,https://www.vidyadhan.org,Jul-31
+G.P. Birla Scholarship,UG,All / EWS,< 3 Lakh,85%+,Trust,https://gpbirlaedufoundation.com,Sep-30
+,,,,,,,
+,,,,,,,
+,,,,,,,
+,,,,,,,
+,,,,,,,
+,,,,,,,
+,,,,,,,
+,,,,,,,
+,,,,,,,
+,,,,,,,
+,,,,,,,
+,,,,,,,
+,,,,,,,
+,,,,,,,
+,,,,,,,
+,,,,,,,
+,,,,,,,
+,,,,,,,
+,,,,,,,
+,,,,,,,
+,,,,,,,
+,,,,,,,
+,,,,,,,
+,,,,,,,
+,,,,,,,
+,,,,,,,
+,,,,,,,
+,,,,,,,
+,,,,,,,
+,,,,,,,
+,,,,,,,
+,,,,,,,
+,,,,,,,
+,,,,,,,
+,,,,,,,
+,,,,,,,
+,,,,,,,
+,,,,,,,
+,,,,,,,
+,,,,,,,
+,,,,,,,
+,,,,,,,
+,,,,,,,
+,,,,,,,
+,,,,,,,
+,,,,,,,
+,,,,,,,
+,,,,,,,
+,,,,,,,
+,,,,,,,
+,,,,,,,
+,,,,,,,
+,,,,,,,
