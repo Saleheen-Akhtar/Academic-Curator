@@ -31,10 +31,11 @@ function makeScholarship(overrides: Partial<Scholarship> = {}): Scholarship {
   };
 }
 
-test('category mappings support SC/ST/OBC/General/PWD/Girls/Minority', () => {
+test('category mappings support SC/ST/OBC/EWS/General/PWD/Girls/Minority', () => {
   const scholarships = [
     makeScholarship({ id: 'sc', categoryRaw: 'SC/ST' }),
     makeScholarship({ id: 'obc', categoryRaw: 'SC/ST/OBC' }),
+    makeScholarship({ id: 'ews', categoryRaw: 'All / EWS' }),
     makeScholarship({ id: 'general', categoryRaw: 'All' }),
     makeScholarship({ id: 'pwd', categoryRaw: 'Disabled' }),
     makeScholarship({ id: 'girls', categoryRaw: 'Girls' }),
@@ -42,11 +43,13 @@ test('category mappings support SC/ST/OBC/General/PWD/Girls/Minority', () => {
   ];
 
   const sc = filterScholarships(scholarships, { category: 'SC', course: 'Engineering', income: '< 1L', cgpa: '8+' });
+  const ews = filterScholarships(scholarships, { category: 'EWS', course: 'Engineering', income: '< 1L', cgpa: '8+' });
   const pwd = filterScholarships(scholarships, { category: 'PWD', course: 'Engineering', income: '< 1L', cgpa: '8+' });
   const girls = filterScholarships(scholarships, { category: 'Girls', course: 'Engineering', income: '< 1L', cgpa: '8+' });
 
   assert.ok(sc.some(s => s.id === 'sc'));
   assert.ok(sc.some(s => s.id === 'minority'));
+  assert.ok(ews.some(s => s.id === 'ews'));
   assert.ok(pwd.some(s => s.id === 'pwd'));
   assert.ok(girls.some(s => s.id === 'girls'));
 });
@@ -115,7 +118,7 @@ test('hybrid search dedupes by normalized title + website across csv and web', a
 test('regression: csv updates are loaded by runtime parser (csv is source of truth)', () => {
   const data = getScholarshipsFromCSV();
   assert.ok(data.length > 0);
-  assert.ok(data.some(item => item.title === 'NSP Scholarship'));
+  assert.ok(data.some(item => item.title === 'SSP Post Matric Scholarship (Karnataka)'));
 });
 
 test('integration: hybrid search returns csv matches even if internet retrieval fails', async () => {
@@ -127,8 +130,8 @@ test('integration: hybrid search returns csv matches even if internet retrieval 
 
   try {
     const result = await getHybridScholarships(
-      { category: 'General', course: 'Engineering', income: '< 1L', cgpa: '7+' },
-      { course: 'Engineering', category: 'General', income: '< 1L', cgpa: '7+', type: 'All', tags: [] },
+      { category: 'General', course: '', income: '', cgpa: '' },
+      { course: '', category: 'General', income: '', cgpa: '', type: 'All', tags: [] },
     );
     assert.ok(result.length > 0);
     assert.ok(result.every(item => item.source === 'csv_database' || item.source === 'web_retrieval'));
