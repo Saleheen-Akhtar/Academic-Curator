@@ -989,11 +989,11 @@ const SearchPage = ({ onSearch, lang, onNavigate, onOpenChat }: {
         contents: `Extract scholarship search filters from this query: "${query}". 
         Available options:
         - course: "10", "12", "B.Com", "BCA", "B.Sc", "BBA", "BA", "B.Tech", "M.Tech", "MBA", "MCA", "M.Sc", "M.Com", "PhD", "MBBS"
-        - category: "2A", "3A", "3B", "SC", "ST", "OBC", "PWD"
+        - category: "2A", "3A", "3B", "SC", "ST", "OBC", "EWS", "PWD"
         - income: "< 1L", "1 - 2.5L", "2.5 - 5L"
         - cgpa: "9+", "8+", "7+", "6+"
         - type: "State", "Central", "Private", "All"
-        - tags: array of strings from ['B.Tech', 'M.Tech', 'MBBS', '2A', '3A', '3B', 'SC', 'ST', 'OBC', 'PWD', '< 1L', 'State', 'Central', 'Private']
+        - tags: array of strings from ['B.Tech', 'M.Tech', 'MBBS', '2A', '3A', '3B', 'SC', 'ST', 'OBC', 'EWS', 'PWD', '< 1L', 'State', 'Central', 'Private']
         
         Return ONLY a JSON object matching the SearchFilters interface.`,
         config: { responseMimeType: "application/json" }
@@ -1108,6 +1108,7 @@ const SearchPage = ({ onSearch, lang, onNavigate, onOpenChat }: {
                   <option value="SC">{lang === 'EN' ? 'SC' : 'ಎಸ್‌ಸಿ'}</option>
                   <option value="ST">{lang === 'EN' ? 'ST' : 'ಎಸ್‌ಟಿ'}</option>
                   <option value="OBC">{lang === 'EN' ? 'OBC' : 'ಒಬಿಸಿ'}</option>
+                  <option value="EWS">{lang === 'EN' ? 'EWS' : 'ಆರ್ಥಿಕ ದುರ್ಬಲ ವರ್ಗ (EWS)'}</option>
                   <option value="PWD">{lang === 'EN' ? 'PWD' : 'ವಿಕಲಚೇತನರು (PWD)'}</option>
                 </select>
                 <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-on-surface-variant pointer-events-none" />
@@ -2393,6 +2394,7 @@ const UserProfilePage = ({ profile, onSave, lang }: { profile: UserProfile, onSa
               <option value="SC">{lang === 'EN' ? 'SC' : 'ಎಸ್‌ಸಿ'}</option>
               <option value="ST">{lang === 'EN' ? 'ST' : 'ಎಸ್‌ಟಿ'}</option>
               <option value="OBC">{lang === 'EN' ? 'OBC' : 'ಒಬಿಸಿ'}</option>
+              <option value="EWS">{lang === 'EN' ? 'EWS' : 'ಆರ್ಥಿಕ ದುರ್ಬಲ ವರ್ಗ (EWS)'}</option>
               <option value="PWD">{lang === 'EN' ? 'PWD' : 'ವಿಕಲಚೇತನರು (PWD)'}</option>
             </select>
           </div>
