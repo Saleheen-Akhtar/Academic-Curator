@@ -267,7 +267,10 @@ function incomeEligible(userIncome: string, scholarshipMaxIncome: number | null 
 
 function cgpaEligible(userCGPA: string, scholarshipMinCGPA: number | null | undefined): boolean {
   if (!userCGPA || scholarshipMinCGPA == null) return true;
-  return userCgpaToAmount(userCGPA) >= scholarshipMinCGPA;
+  // Give a slightly relaxed margin (e.g., 0.5 CGPA or 5% margin) to ease restrictions
+  // This helps when a user has e.g. 74% and minimum is 75%
+  const margin = scholarshipMinCGPA > 10 ? 5 : 0.5;
+  return userCgpaToAmount(userCGPA) >= (scholarshipMinCGPA - margin);
 }
 
 function courseRelevant(userCourse: string, scholarshipCourse: string | undefined): boolean {
@@ -281,17 +284,39 @@ function courseRelevant(userCourse: string, scholarshipCourse: string | undefine
 
   if (hasMatch) return true;
 
-  // Extra relaxed checks: if user types "10th" or "12th" or "school" we check common mappings
-  const mapped = [];
-  if (normalizedUserCourse.includes("10th") || normalizedUserCourse.includes("12th") || normalizedUserCourse.includes("school")) {
-    mapped.push("school");
-    mapped.push("class");
-    mapped.push("pre-matric");
-    mapped.push("post-matric");
+  // Extra relaxed checks
+  const mapped: string[] = [];
+  if (normalizedUserCourse.includes('10th') || normalizedUserCourse.includes('12th') || normalizedUserCourse.includes('school') || normalizedUserCourse.includes('high school')) {
+    mapped.push('school');
+    mapped.push('class');
+    mapped.push('pre-matric');
+    mapped.push('post-matric');
+  }
+
+  const ugKeywords = ['btech', 'b.tech', 'bca', 'bcom', 'b.com', 'bsc', 'b.sc', 'ba', 'b.a', 'undergraduate', 'bachelor', 'ug', 'degree'];
+  if (ugKeywords.some(k => normalizedUserCourse.includes(k))) {
+    mapped.push('undergraduate');
+    mapped.push('ug');
+    mapped.push('bachelor');
+    mapped.push('degree');
+    mapped.push('college');
+  }
+
+  const pgKeywords = ['mtech', 'm.tech', 'mca', 'mcom', 'm.com', 'msc', 'm.sc', 'ma', 'm.a', 'postgraduate', 'master', 'pg'];
+  if (pgKeywords.some(k => normalizedUserCourse.includes(k))) {
+    mapped.push('postgraduate');
+    mapped.push('pg');
+    mapped.push('master');
+    mapped.push('university');
   }
 
   const normScholarshipCourse = scholarshipCourse.toLowerCase();
-  return mapped.some(m => normScholarshipCourse.includes(m));
+
+  // Check if mapped keywords match scholarship course
+  if (mapped.some(m => normScholarshipCourse.includes(m))) return true;
+
+  // Check if the user course explicitly has some keywords that might match 'Any' or similar generic names implicitly
+  return false;
 }
 
 function computeMatchScore(params: {
@@ -402,7 +427,9 @@ export function filterScholarships(
 
         const failedStrictCategory = categorySpecified && !categoryOk;
 
-        isEligible = (hasSpecifiedCriteria ? matchesSomething : true) && !failedStrictCategory;
+        // Further relax restrictions: as long as category isn't violated, show it.
+        // The ones matching better will float to the top because of MatchScore.
+        isEligible = !failedStrictCategory;
       }
       if (!isEligible) return null;
 
