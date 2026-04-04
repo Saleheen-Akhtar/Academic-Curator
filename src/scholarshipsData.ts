@@ -267,11 +267,23 @@ function incomeEligible(userIncome: string, scholarshipMaxIncome: number | null 
 
 function cgpaEligible(userCGPA: string, scholarshipMinCGPA: number | null | undefined): boolean {
   if (!userCGPA || scholarshipMinCGPA == null) return true;
-  // Give a slightly relaxed margin (e.g., 0.5 CGPA or 5% margin) to ease restrictions
-  // This helps when a user has e.g. 74% and minimum is 75%
-  const margin = scholarshipMinCGPA > 10 ? 5 : 0.5;
-  return userCgpaToAmount(userCGPA) >= (scholarshipMinCGPA - margin);
+
+  let userAmount = userCgpaToAmount(userCGPA);
+  let minCgpa = scholarshipMinCGPA;
+
+  // Normalize percentage to 10-point scale if needed so comparisons are consistent
+  if (minCgpa > 10 && userAmount <= 10) {
+    minCgpa = minCgpa / 9.5; // Roughly scale percentage to CGPA
+  } else if (userAmount > 10 && minCgpa <= 10) {
+    userAmount = userAmount / 9.5;
+  }
+
+  const margin = minCgpa > 10 ? 5 : 0.5;
+  return userAmount >= (minCgpa - margin);
 }
+
+const UG_KEYWORDS = ['btech', 'b.tech', 'bca', 'bcom', 'b.com', 'bsc', 'b.sc', 'ba', 'b.a', 'undergraduate', 'bachelor', 'ug', 'degree'];
+const PG_KEYWORDS = ['mtech', 'm.tech', 'mca', 'mcom', 'm.com', 'msc', 'm.sc', 'ma', 'm.a', 'postgraduate', 'master', 'pg'];
 
 function courseRelevant(userCourse: string, scholarshipCourse: string | undefined): boolean {
   if (!userCourse || !scholarshipCourse || scholarshipCourse === 'Any') return true;
@@ -293,8 +305,7 @@ function courseRelevant(userCourse: string, scholarshipCourse: string | undefine
     mapped.push('post-matric');
   }
 
-  const ugKeywords = ['btech', 'b.tech', 'bca', 'bcom', 'b.com', 'bsc', 'b.sc', 'ba', 'b.a', 'undergraduate', 'bachelor', 'ug', 'degree'];
-  if (ugKeywords.some(k => normalizedUserCourse.includes(k))) {
+  if (UG_KEYWORDS.some(k => normalizedUserCourse.includes(k))) {
     mapped.push('undergraduate');
     mapped.push('ug');
     mapped.push('bachelor');
@@ -302,8 +313,7 @@ function courseRelevant(userCourse: string, scholarshipCourse: string | undefine
     mapped.push('college');
   }
 
-  const pgKeywords = ['mtech', 'm.tech', 'mca', 'mcom', 'm.com', 'msc', 'm.sc', 'ma', 'm.a', 'postgraduate', 'master', 'pg'];
-  if (pgKeywords.some(k => normalizedUserCourse.includes(k))) {
+  if (PG_KEYWORDS.some(k => normalizedUserCourse.includes(k))) {
     mapped.push('postgraduate');
     mapped.push('pg');
     mapped.push('master');
@@ -315,7 +325,6 @@ function courseRelevant(userCourse: string, scholarshipCourse: string | undefine
   // Check if mapped keywords match scholarship course
   if (mapped.some(m => normScholarshipCourse.includes(m))) return true;
 
-  // Check if the user course explicitly has some keywords that might match 'Any' or similar generic names implicitly
   return false;
 }
 
@@ -427,9 +436,10 @@ export function filterScholarships(
 
         const failedStrictCategory = categorySpecified && !categoryOk;
 
-        // Further relax restrictions: as long as category isn't violated, show it.
-        // The ones matching better will float to the top because of MatchScore.
-        isEligible = !failedStrictCategory;
+        // In relaxed mode, still reject explicit category mismatches.
+        // Otherwise, if the user provided any criteria, require at least one
+        // specified criterion to match; if nothing was specified, allow all.
+        isEligible = !failedStrictCategory && (!hasSpecifiedCriteria || matchesSomething);
       }
       if (!isEligible) return null;
 
