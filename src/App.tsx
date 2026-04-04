@@ -432,6 +432,14 @@ const LoginPage = ({ onLoginSuccess, lang }: { onLoginSuccess: () => void, lang:
     if (user) onLoginSuccess();
   }, [user, onLoginSuccess]);
 
+  if (!scholarshipsLoaded) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-background">
+        <div className="animate-spin rounded-full h-12 w-12 border-4 border-primary border-t-transparent"></div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-surface-container-low p-6">
       <motion.div 
@@ -3133,27 +3141,28 @@ const AIChatbot = ({ isOpen, onToggle, lang }: AIChatbotProps & { lang: Language
   );
 };
 
+const DEADLINE_MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const normalizeDeadlineForDisplay = (deadline: unknown): unknown => {
+  if (typeof deadline !== 'string') return deadline;
+  const isoMatch = deadline.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!isoMatch) return deadline;
+  const monthIndex = Number(isoMatch[2]) - 1;
+  const day = Number(isoMatch[3]);
+  if (monthIndex < 0 || monthIndex >= DEADLINE_MONTHS.length || day < 1 || day > 31) return deadline;
+  return `${day.toString().padStart(2, '0')} ${DEADLINE_MONTHS[monthIndex]}`;
+};
+
+const normalizeDynamicScholarships = <T extends Record<string, unknown>>(scholarships: T[]): T[] => {
+  return scholarships.map((scholarship) => {
+    if (!('deadline' in scholarship)) return scholarship;
+    return {
+      ...scholarship,
+      deadline: normalizeDeadlineForDisplay(scholarship.deadline),
+    };
+  });
+};
+
 function AppContent() {
-  const [scholarshipsLoaded, setScholarshipsLoaded] = useState(false);
-
-  useEffect(() => {
-    fetchDynamicScholarships().then(data => {
-      SCHOLARSHIPS = data;
-      setScholarshipsLoaded(true);
-    }).catch(err => {
-      console.error(err);
-      setScholarshipsLoaded(true);
-    });
-  }, []);
-
-  if (!scholarshipsLoaded) {
-    return (
-      <div className="flex h-screen items-center justify-center bg-background">
-        <div className="animate-spin rounded-full h-12 w-12 border-4 border-primary border-t-transparent"></div>
-      </div>
-    );
-  }
-
   const { user, loading: authLoading } = useAuth();
   const [page, setPage] = useState<Page>('landing');
   const [previousPage, setPreviousPage] = useState<Page>('landing');
@@ -3163,6 +3172,20 @@ function AppContent() {
     const saved = localStorage.getItem('darkMode');
     return saved ? JSON.parse(saved) : window.matchMedia('(prefers-color-scheme: dark)').matches;
   });
+
+  const [scholarshipsLoaded, setScholarshipsLoaded] = useState(false);
+
+  useEffect(() => {
+    fetchDynamicScholarships().then(data => {
+      SCHOLARSHIPS = normalizeDynamicScholarships(data as any) as any;
+      setScholarshipsLoaded(true);
+    }).catch(err => {
+      console.error(err);
+      setScholarshipsLoaded(true);
+    });
+  }, []);
+
+
 
   useEffect(() => {
     localStorage.setItem('darkMode', JSON.stringify(isDarkMode));
@@ -3428,6 +3451,14 @@ function AppContent() {
           <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin" />
           <p className="text-primary font-bold animate-pulse">Initializing Your Curator...</p>
         </div>
+      </div>
+    );
+  }
+
+  if (!scholarshipsLoaded) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-background">
+        <div className="animate-spin rounded-full h-12 w-12 border-4 border-primary border-t-transparent"></div>
       </div>
     );
   }
