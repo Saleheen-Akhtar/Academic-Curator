@@ -272,10 +272,26 @@ function cgpaEligible(userCGPA: string, scholarshipMinCGPA: number | null | unde
 
 function courseRelevant(userCourse: string, scholarshipCourse: string | undefined): boolean {
   if (!userCourse || !scholarshipCourse || scholarshipCourse === 'Any') return true;
-  const normalizedUserCourse = userCourse.toLowerCase();
-  return splitTokens(scholarshipCourse)
+  const normalizedUserCourse = userCourse.toLowerCase().trim();
+
+  // Try split match first
+  const hasMatch = splitTokens(scholarshipCourse)
     .map(token => token.toLowerCase())
     .some(token => normalizedUserCourse.includes(token) || token.includes(normalizedUserCourse));
+
+  if (hasMatch) return true;
+
+  // Extra relaxed checks: if user types "10th" or "12th" or "school" we check common mappings
+  const mapped = [];
+  if (normalizedUserCourse.includes("10th") || normalizedUserCourse.includes("12th") || normalizedUserCourse.includes("school")) {
+    mapped.push("school");
+    mapped.push("class");
+    mapped.push("pre-matric");
+    mapped.push("post-matric");
+  }
+
+  const normScholarshipCourse = scholarshipCourse.toLowerCase();
+  return mapped.some(m => normScholarshipCourse.includes(m));
 }
 
 function computeMatchScore(params: {
@@ -285,10 +301,10 @@ function computeMatchScore(params: {
   courseOk: boolean;
 }): number {
   let score = 0;
-  if (params.categoryOk) score += 30;
-  if (params.incomeOk) score += 25;
-  if (params.cgpaOk) score += 25;
-  if (params.courseOk) score += 20;
+  if (params.categoryOk) score += 40;
+  if (params.incomeOk) score += 30;
+  if (params.cgpaOk) score += 20;
+  if (params.courseOk) score += 10;
   return score;
 }
 
@@ -378,14 +394,15 @@ export function filterScholarships(
           (courseSpecified && !courseOk);
         isEligible = !failedHardEligibility;
       } else {
-        const matchesSomething = (categorySpecified ? categoryOk : true) ||
-                                 (incomeSpecified ? incomeOk : true) ||
-                                 (cgpaSpecified ? cgpaOk : true) ||
-                                 (courseSpecified ? courseOk : true);
+        const hasSpecifiedCriteria = categorySpecified || incomeSpecified || cgpaSpecified || courseSpecified;
+        const matchesSomething = (categorySpecified ? categoryOk : false) ||
+                                 (incomeSpecified ? incomeOk : false) ||
+                                 (cgpaSpecified ? cgpaOk : false) ||
+                                 (courseSpecified ? courseOk : false);
 
         const failedStrictCategory = categorySpecified && !categoryOk;
 
-        isEligible = matchesSomething && !failedStrictCategory;
+        isEligible = (hasSpecifiedCriteria ? matchesSomething : true) && !failedStrictCategory;
       }
       if (!isEligible) return null;
 
