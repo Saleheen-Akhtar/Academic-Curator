@@ -346,7 +346,8 @@ export const SCHOLARSHIPS_FROM_CSV = getScholarshipsFromCSV();
 export function filterScholarships(
   scholarships: Scholarship[],
   userProfile: Partial<UserProfile>,
-  filters?: ScholarshipFilters
+  filters?: ScholarshipFilters,
+  mode: 'strict' | 'relaxed' = 'strict'
 ): Array<Scholarship & { matchScore: number; matchedBecause: string[] }> {
   const profile = {
     course: filters?.course || userProfile.course || '',
@@ -367,13 +368,25 @@ export function filterScholarships(
       const cgpaOk = cgpaEligible(profile.cgpa, scholarship.minCgpa);
       const courseOk = courseRelevant(profile.course, scholarship.course);
 
-      const failedHardEligibility =
-        (categorySpecified && !categoryOk) ||
-        (incomeSpecified && !incomeOk) ||
-        (cgpaSpecified && !cgpaOk) ||
-        (courseSpecified && !courseOk);
+      let isEligible = true;
 
-      const isEligible = !failedHardEligibility;
+      if (mode === 'strict') {
+        const failedHardEligibility =
+          (categorySpecified && !categoryOk) ||
+          (incomeSpecified && !incomeOk) ||
+          (cgpaSpecified && !cgpaOk) ||
+          (courseSpecified && !courseOk);
+        isEligible = !failedHardEligibility;
+      } else {
+        const matchesSomething = (categorySpecified ? categoryOk : true) ||
+                                 (incomeSpecified ? incomeOk : true) ||
+                                 (cgpaSpecified ? cgpaOk : true) ||
+                                 (courseSpecified ? courseOk : true);
+
+        const failedStrictCategory = categorySpecified && !categoryOk;
+
+        isEligible = matchesSomething && !failedStrictCategory;
+      }
       if (!isEligible) return null;
 
       const matchScore = computeMatchScore({
