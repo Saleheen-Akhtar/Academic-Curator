@@ -24,10 +24,14 @@ export interface Scholarship {
 
 interface RawScholarship {
   Name: string;
+  'Scholarship Name'?: string;
   Category: string;
   Income: string;
+  'Annual Income'?: string;
   CGPA: string;
+  'Current CGPA / %'?: string;
   Course: string;
+  'Scholarship Type'?: string;
   Level: string;
   State: string;
   Deadline: string;
@@ -96,10 +100,30 @@ export interface ScholarshipFilters {
 }
 
 function parseDate(dateStr: string): string {
-  const [day, month] = dateStr.split('-');
+  if (!dateStr) return 'Rolling';
+  const compact = dateStr.trim();
+  if (!compact) return 'Rolling';
+  if (/^(rolling|ongoing)$/i.test(compact)) return 'Rolling';
+
   const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-  const monthName = months[Math.max(0, (parseInt(month, 10) || 1) - 1)] ?? 'Jan';
-  return `${day} ${monthName}`;
+  if (/^[A-Za-z]{3}$/.test(compact)) {
+    const normalizedMonth = compact.charAt(0).toUpperCase() + compact.slice(1).toLowerCase();
+    return months.includes(normalizedMonth) ? normalizedMonth : compact;
+  }
+
+  const monthFirst = compact.match(/^([A-Za-z]{3})-(\d{1,2})$/);
+  if (monthFirst) {
+    const normalizedMonth = monthFirst[1].charAt(0).toUpperCase() + monthFirst[1].slice(1).toLowerCase();
+    return `${monthFirst[2]} ${normalizedMonth}`;
+  }
+
+  const dayMonth = compact.match(/^(\d{1,2})-(\d{1,2})$/);
+  if (dayMonth) {
+    const monthIndex = parseInt(dayMonth[2], 10) - 1;
+    if (monthIndex >= 0 && monthIndex < months.length) return `${dayMonth[1]} ${months[monthIndex]}`;
+  }
+
+  return compact;
 }
 
 function parseCSV(csv: string): RawScholarship[] {
@@ -115,7 +139,9 @@ function parseCSV(csv: string): RawScholarship[] {
     headers.forEach((header, idx) => {
       obj[header] = values[idx] ?? '';
     });
-    data.push(obj as unknown as RawScholarship);
+    const row = obj as unknown as RawScholarship;
+    if (!(row.Name || row['Scholarship Name'] || '').trim()) continue;
+    data.push(row);
   }
 
   return data;
@@ -123,13 +149,22 @@ function parseCSV(csv: string): RawScholarship[] {
 
 function normalizeIncome(value: string): number | null {
   if (!value || value.toLowerCase() === 'no limit') return null;
-  const parsed = parseInt(value, 10);
+  const normalized = value.toLowerCase().replace(/,/g, '').replace(/\s+/g, ' ').trim();
+  const lakhMatch = normalized.match(/(\d+(?:\.\d+)?)\s*lakh/);
+  if (lakhMatch) return Math.round(parseFloat(lakhMatch[1]) * 100000);
+  const digits = normalized.match(/\d+/g);
+  if (!digits?.length) return null;
+  const parsed = parseInt(digits[digits.length - 1], 10);
   return Number.isNaN(parsed) ? null : parsed;
 }
 
 function normalizeCgpa(value: string): number | null {
+  if (!value) return null;
   const parsed = parseFloat(value);
-  return Number.isNaN(parsed) ? null : parsed;
+  if (Number.isNaN(parsed)) return null;
+  if (value.includes('%') || value.toLowerCase().includes('percentile')) return parsed / 10;
+  if (parsed > 10) return parsed / 10;
+  return parsed;
 }
 
 function userIncomeToAmount(userIncome: string): number {
@@ -152,10 +187,14 @@ function userCgpaToAmount(userCgpa: string): number {
 }
 
 function deriveScholarshipType(raw: RawScholarship): ScholarshipType {
+  const declaredType = (raw['Scholarship Type'] || '').toLowerCase();
+  if (declaredType.includes('state')) return 'State';
+  if (declaredType.includes('central')) return 'Central';
+  if (declaredType.includes('private') || declaredType.includes('trust') || declaredType.includes('corporate')) return 'Private';
   if (raw.State && raw.State !== 'All') return 'State';
 
-  const lowerName = raw.Name.toLowerCase();
-  const lowerLink = raw.Link.toLowerCase();
+  const lowerName = (raw.Name || raw['Scholarship Name'] || '').toLowerCase();
+  const lowerLink = (raw.Link || '').toLowerCase();
   const centralIndicators = ['gov.in', 'nic.in', 'scholarships.gov.in', 'aicte', 'nsp', 'national', 'central'];
   const isCentral = centralIndicators.some(indicator => lowerName.includes(indicator) || lowerLink.includes(indicator));
 
@@ -168,7 +207,7 @@ function toDisplayCategory(type: ScholarshipType): Scholarship['category'] {
 }
 
 function splitTokens(raw: string): string[] {
-  return raw.split('/').map(item => item.trim()).filter(Boolean);
+  return raw.split(/[\/,]/).map(item => item.trim()).filter(Boolean);
 }
 
 function generateTags(raw: RawScholarship): string[] {
@@ -183,7 +222,7 @@ function generateTags(raw: RawScholarship): string[] {
   const rawCategory = raw.Category.trim();
 
   if (rawCategory === 'All') {
-    tags.push('General', 'SC', 'ST', 'OBC', 'PWD', 'Girls', 'Minority');
+    tags.push('General', 'SC', 'ST', 'OBC', 'EWS', 'PWD', 'Girls', 'Minority');
   } else {
     tags.push(...categoryTokens);
     if (rawCategory === 'Disabled') tags.push('PWD');
@@ -192,7 +231,8 @@ function generateTags(raw: RawScholarship): string[] {
   if (raw.State === 'All') {
     tags.push('Central', 'National');
   } else {
-    tags.push('State', raw.State);
+    tags.push('State');
+    if (raw.State) tags.push(raw.State);
   }
 
   return [...new Set(tags)];
@@ -207,6 +247,7 @@ function categoryMatches(userCategory: string, scholarshipCategoryRaw: string): 
     'SC': ['all', 'sc', 'sc/st', 'sc/st/obc', 'minority'],
     'ST': ['all', 'st', 'sc/st', 'sc/st/obc', 'minority'],
     'OBC': ['all', 'obc', 'sc/st/obc', 'minority'],
+    'EWS': ['all', 'ews'],
     'PWD': ['all', 'disabled', 'pwd'],
     'Girls': ['all', 'girls'],
     'Minority': ['all', 'minority'],
@@ -273,19 +314,22 @@ export function getScholarshipsFromCSV(): Scholarship[] {
   const rawData = parseCSV(scholarshipsCsvRaw);
 
   return rawData.map((raw, index) => {
-    const maxIncome = normalizeIncome(raw.Income);
-    const minCgpa = normalizeCgpa(raw.CGPA);
+    const title = raw.Name || raw['Scholarship Name'] || '';
+    const incomeRaw = raw.Income || raw['Annual Income'] || '';
+    const cgpaRaw = raw.CGPA || raw['Current CGPA / %'] || '';
+    const maxIncome = normalizeIncome(incomeRaw);
+    const minCgpa = normalizeCgpa(cgpaRaw);
     const scholarshipType = deriveScholarshipType(raw);
 
     return {
       id: (index + 1).toString(),
-      title: raw.Name,
-      description: `${raw.Course} scholarship for ${raw.Category !== 'All' ? raw.Category : 'all categories'}. Maximum family income: ${maxIncome == null ? 'No limit' : `₹${maxIncome.toLocaleString('en-IN')}`}. Minimum CGPA required: ${raw.CGPA}.`,
+      title,
+      description: `${raw.Course} scholarship for ${raw.Category !== 'All' ? raw.Category : 'all categories'}. Maximum family income: ${maxIncome == null ? 'No limit' : `₹${maxIncome.toLocaleString('en-IN')}`}. Minimum CGPA required: ${cgpaRaw || 'Not specified'}.`,
       reward: `Varies${maxIncome == null ? '' : ` (Max Income: ₹${(maxIncome / 100000).toFixed(1)}L)`}`,
       deadline: parseDate(raw.Deadline),
       category: toDisplayCategory(scholarshipType),
       tags: generateTags(raw),
-      state: raw.State,
+      state: raw.State || 'All',
       link: raw.Link,
       maxIncome,
       minCgpa,
