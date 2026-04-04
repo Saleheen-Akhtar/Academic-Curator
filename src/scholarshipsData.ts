@@ -268,18 +268,10 @@ function incomeEligible(userIncome: string, scholarshipMaxIncome: number | null 
 function cgpaEligible(userCGPA: string, scholarshipMinCGPA: number | null | undefined): boolean {
   if (!userCGPA || scholarshipMinCGPA == null) return true;
 
-  let userAmount = userCgpaToAmount(userCGPA);
-  let minCgpa = scholarshipMinCGPA;
+  const userAmount = userCgpaToAmount(userCGPA);
+  const minCgpa = scholarshipMinCGPA > 10 ? scholarshipMinCGPA / 10 : scholarshipMinCGPA;
 
-  // Normalize percentage to 10-point scale if needed so comparisons are consistent
-  if (minCgpa > 10 && userAmount <= 10) {
-    minCgpa = minCgpa / 9.5; // Roughly scale percentage to CGPA
-  } else if (userAmount > 10 && minCgpa <= 10) {
-    userAmount = userAmount / 9.5;
-  }
-
-  const margin = minCgpa > 10 ? 5 : 0.5;
-  return userAmount >= (minCgpa - margin);
+  return userAmount >= (minCgpa - 0.5);
 }
 
 const UG_KEYWORDS = ['btech', 'b.tech', 'bca', 'bcom', 'b.com', 'bsc', 'b.sc', 'ba', 'b.a', 'undergraduate', 'bachelor', 'ug', 'degree'];

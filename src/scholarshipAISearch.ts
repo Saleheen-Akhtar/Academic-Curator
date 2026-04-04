@@ -244,16 +244,26 @@ Return JSON array with: [{"title":"...","aiInsight":"..."}]`;
 }
 
 
+const DYNAMIC_SCHOLARSHIP_FETCH_DELAY_MS = (() => {
+  const isTestEnv = typeof process !== 'undefined' && process.env?.NODE_ENV === 'test';
+  const isBrowser = typeof window !== 'undefined';
+  if (isTestEnv || !isBrowser) {
+    return 0;
+  }
+  return 800;
+})();
+
 export async function fetchDynamicScholarships(): Promise<Scholarship[]> {
-  // Simulate network delay
-  await new Promise(resolve => setTimeout(resolve, 800));
+  if (DYNAMIC_SCHOLARSHIP_FETCH_DELAY_MS > 0) {
+    await new Promise(resolve => setTimeout(resolve, DYNAMIC_SCHOLARSHIP_FETCH_DELAY_MS));
+  }
 
   // Simulated structured data representing fetches from:
   // Karnataka State Government (https://ssp.karnataka.gov.in)
   // Central Government (https://scholarships.gov.in)
   // Private Trust / NGO (https://buddy4study.com)
 
-  const rawData: any[] = [
+  const rawData: Scholarship[] = [
     // --- State Government (Karnataka) ---
     {
       id: 'state_1',
@@ -378,7 +388,7 @@ export async function getHybridScholarships(
   }
 
   let dynamicEligible = filterScholarships(dynamicScholarships, userProfile, filters, 'strict').map((item) =>
-    toAIScholarship(item, (item as any).source as any || 'web_retrieval')
+    toAIScholarship(item, (item as any).source || 'web_retrieval')
   );
 
   let webEligible: AIScholarship[] = [];
@@ -387,7 +397,7 @@ export async function getHybridScholarships(
     webRetrieved = await fetchWebScholarships(userProfile, filters);
     const webNormalized = mapWebScholarshipsToNormalized(webRetrieved);
     webEligible = filterScholarships(webNormalized, userProfile, filters, 'strict').map((item) =>
-      toAIScholarship(item, 'web_retrieval' as any),
+      toAIScholarship(item, 'web_retrieval'),
     );
   } catch (error) {
     console.error('Hybrid search failed; web retrieval error.', error);
@@ -412,7 +422,7 @@ export async function getHybridScholarships(
   if (tagFiltered.length === 0 && dynamicScholarships.length > 0) {
     console.info('No strict matches found. Falling back to relaxed dynamic results.');
     const relaxedDynamicEligible = filterScholarships(dynamicScholarships, userProfile, filters, 'relaxed').map((item) =>
-      toAIScholarship(item, (item as any).source as any || 'web_retrieval'),
+      toAIScholarship(item, (item as any).source || 'web_retrieval'),
     );
 
     seen.clear();
