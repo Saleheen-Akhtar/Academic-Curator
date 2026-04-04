@@ -121,6 +121,17 @@ test('regression: csv updates are loaded by runtime parser (csv is source of tru
   assert.ok(data.some(item => item.title === 'SSP Post Matric Scholarship (Karnataka)'));
 });
 
+test('regression: csv date and merit formats are normalized correctly', () => {
+  const data = getScholarshipsFromCSV();
+  const inspire = data.find(item => item.title === 'INSPIRE Scholarship');
+  const sitaram = data.find(item => item.title === 'Sitaram Jindal Scholarship');
+  const nsp = data.find(item => item.title === 'National Scholarship Portal (NSP CSSS)');
+
+  assert.equal(inspire?.deadline, 'Oct');
+  assert.equal(sitaram?.deadline, 'Rolling');
+  assert.equal(nsp?.minCgpa, 8);
+});
+
 test('integration: hybrid search returns csv matches even if internet retrieval fails', async () => {
   process.env.VITE_SCHOLARSHIP_RETRIEVAL_URL = 'https://retrieval.local/search';
   const originalFetch = globalThis.fetch;

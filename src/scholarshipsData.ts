@@ -102,12 +102,28 @@ export interface ScholarshipFilters {
 function parseDate(dateStr: string): string {
   if (!dateStr) return 'Rolling';
   const compact = dateStr.trim();
-  const monthFirst = compact.match(/^([A-Za-z]{3})-(\d{1,2})$/);
-  if (monthFirst) return `${monthFirst[2]} ${monthFirst[1]}`;
-  const [day, month] = compact.split('-');
+  if (!compact) return 'Rolling';
+  if (/^(rolling|ongoing)$/i.test(compact)) return 'Rolling';
+
   const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-  const monthName = months[Math.max(0, (parseInt(month, 10) || 1) - 1)] ?? 'Jan';
-  return `${day} ${monthName}`;
+  if (/^[A-Za-z]{3}$/.test(compact)) {
+    const normalizedMonth = compact.charAt(0).toUpperCase() + compact.slice(1).toLowerCase();
+    return months.includes(normalizedMonth) ? normalizedMonth : compact;
+  }
+
+  const monthFirst = compact.match(/^([A-Za-z]{3})-(\d{1,2})$/);
+  if (monthFirst) {
+    const normalizedMonth = monthFirst[1].charAt(0).toUpperCase() + monthFirst[1].slice(1).toLowerCase();
+    return `${monthFirst[2]} ${normalizedMonth}`;
+  }
+
+  const dayMonth = compact.match(/^(\d{1,2})-(\d{1,2})$/);
+  if (dayMonth) {
+    const monthIndex = parseInt(dayMonth[2], 10) - 1;
+    if (monthIndex >= 0 && monthIndex < months.length) return `${dayMonth[1]} ${months[monthIndex]}`;
+  }
+
+  return compact;
 }
 
 function parseCSV(csv: string): RawScholarship[] {
@@ -146,7 +162,8 @@ function normalizeCgpa(value: string): number | null {
   if (!value) return null;
   const parsed = parseFloat(value);
   if (Number.isNaN(parsed)) return null;
-  if (value.includes('%')) return parsed / 10;
+  if (value.includes('%') || value.toLowerCase().includes('percentile')) return parsed / 10;
+  if (parsed > 10) return parsed / 10;
   return parsed;
 }
 
@@ -170,6 +187,10 @@ function userCgpaToAmount(userCgpa: string): number {
 }
 
 function deriveScholarshipType(raw: RawScholarship): ScholarshipType {
+  const declaredType = (raw['Scholarship Type'] || '').toLowerCase();
+  if (declaredType.includes('state')) return 'State';
+  if (declaredType.includes('central')) return 'Central';
+  if (declaredType.includes('private') || declaredType.includes('trust') || declaredType.includes('corporate')) return 'Private';
   if (raw.State && raw.State !== 'All') return 'State';
 
   const lowerName = (raw.Name || raw['Scholarship Name'] || '').toLowerCase();
@@ -210,7 +231,8 @@ function generateTags(raw: RawScholarship): string[] {
   if (raw.State === 'All') {
     tags.push('Central', 'National');
   } else {
-    tags.push('State', raw.State);
+    tags.push('State');
+    if (raw.State) tags.push(raw.State);
   }
 
   return [...new Set(tags)];
@@ -307,7 +329,7 @@ export function getScholarshipsFromCSV(): Scholarship[] {
       deadline: parseDate(raw.Deadline),
       category: toDisplayCategory(scholarshipType),
       tags: generateTags(raw),
-      state: raw.State,
+      state: raw.State || 'All',
       link: raw.Link,
       maxIncome,
       minCgpa,

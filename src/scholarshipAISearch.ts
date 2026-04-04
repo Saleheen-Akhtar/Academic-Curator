@@ -1,6 +1,6 @@
 import { GoogleGenAI } from '@google/genai';
 import {
-  SCHOLARSHIPS_FROM_CSV,
+  getScholarshipsFromCSV,
   filterScholarships,
   Scholarship,
   ScholarshipFilters,
@@ -247,7 +247,8 @@ export async function getHybridScholarships(
   userProfile: Partial<UserProfile>,
   filters?: SearchFilters,
 ): Promise<AIScholarship[]> {
-  const csvEligible = filterScholarships(SCHOLARSHIPS_FROM_CSV, userProfile, filters).map((item) =>
+  const csvScholarships = getScholarshipsFromCSV();
+  const csvEligible = filterScholarships(csvScholarships, userProfile, filters).map((item) =>
     toAIScholarship(item, 'csv_database'),
   );
 
