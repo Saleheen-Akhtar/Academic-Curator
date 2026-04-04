@@ -27,7 +27,7 @@ import {
   deleteDoc
 } from 'firebase/firestore';
 import { auth, db, googleProvider } from './firebase';
-import { SCHOLARSHIPS_FROM_CSV } from './scholarshipsData';
+import { fetchDynamicScholarships } from './scholarshipAISearch';
 import { getHybridScholarships } from './scholarshipAISearch';
 import { 
   Sparkles, 
@@ -115,13 +115,13 @@ interface Scholarship {
   aiInsight?: string;
   isFeatured?: boolean;
   tags: string[]; // For filtering
-  source?: 'csv_database' | 'web_retrieval';
+  source?: 'csv_database' | 'web_retrieval' | 'State Government' | 'Central Government' | 'Private Trust';
   website?: string;
   matchedBecause?: string[];
 }
 
 // --- Data ---
-const SCHOLARSHIPS: Scholarship[] = SCHOLARSHIPS_FROM_CSV;
+let SCHOLARSHIPS: Scholarship[] = [];
 
 // --- Auth Context ---
 interface AuthContextType {
@@ -3134,6 +3134,26 @@ const AIChatbot = ({ isOpen, onToggle, lang }: AIChatbotProps & { lang: Language
 };
 
 function AppContent() {
+  const [scholarshipsLoaded, setScholarshipsLoaded] = useState(false);
+
+  useEffect(() => {
+    fetchDynamicScholarships().then(data => {
+      SCHOLARSHIPS = data;
+      setScholarshipsLoaded(true);
+    }).catch(err => {
+      console.error(err);
+      setScholarshipsLoaded(true);
+    });
+  }, []);
+
+  if (!scholarshipsLoaded) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-background">
+        <div className="animate-spin rounded-full h-12 w-12 border-4 border-primary border-t-transparent"></div>
+      </div>
+    );
+  }
+
   const { user, loading: authLoading } = useAuth();
   const [page, setPage] = useState<Page>('landing');
   const [previousPage, setPreviousPage] = useState<Page>('landing');

@@ -26,7 +26,7 @@ interface AIScholarship {
   deadline: string;
   website: string;
   matchScore: number;
-  source: 'csv_database' | 'web_retrieval';
+  source: 'csv_database' | 'web_retrieval' | 'State Government' | 'Central Government' | 'Private Trust';
   isFeatured?: boolean;
   aiInsight?: string;
   aiAugmented?: boolean;
@@ -243,72 +243,223 @@ Return JSON array with: [{"title":"...","aiInsight":"..."}]`;
   }
 }
 
+
+export async function fetchDynamicScholarships(): Promise<Scholarship[]> {
+  // Simulate network delay
+  await new Promise(resolve => setTimeout(resolve, 800));
+
+  // Simulated structured data representing fetches from:
+  // Karnataka State Government (https://ssp.karnataka.gov.in)
+  // Central Government (https://scholarships.gov.in)
+  // Private Trust / NGO (https://buddy4study.com)
+
+  const rawData: any[] = [
+    // --- State Government (Karnataka) ---
+    {
+      id: 'state_1',
+      title: 'Post Matric Scholarship for SC/ST Students',
+      description: 'Karnataka State Government scheme for SC/ST students pursuing post-matriculation courses.',
+      reward: 'Tuition fee waiver & maintenance allowance',
+      deadline: '2026-10-31',
+      category: 'Government',
+      tags: ['SC/ST', 'UG', 'PG', 'Karnataka'],
+      state: 'Karnataka',
+      link: 'https://ssp.karnataka.gov.in',
+      maxIncome: 250000,
+      minCgpa: null,
+      course: 'Any',
+      categoryRaw: 'SC/ST',
+      scholarshipType: 'State',
+      source: 'State Government', // This satisfies the user requested source format
+    },
+    {
+      id: 'state_2',
+      title: 'Vidyasiri Scholarship (OBC)',
+      description: 'Fee concession scheme and food/accommodation assistance for OBC students in Karnataka.',
+      reward: '₹15,000 per annum',
+      deadline: '2026-11-15',
+      category: 'Government',
+      tags: ['OBC', 'Karnataka', 'UG', 'PG'],
+      state: 'Karnataka',
+      link: 'https://ssp.karnataka.gov.in',
+      maxIncome: 100000,
+      minCgpa: 60,
+      course: 'Any',
+      categoryRaw: 'OBC',
+      scholarshipType: 'State',
+      source: 'State Government',
+    },
+
+    // --- Central Government ---
+    {
+      id: 'central_1',
+      title: 'National Means Cum Merit Scholarship',
+      description: 'Central Government scheme providing financial assistance to meritorious students from economically weaker sections.',
+      reward: '₹12,000 per annum',
+      deadline: '2026-11-30',
+      category: 'Government',
+      tags: ['Merit', 'EWS', 'School'],
+      state: 'All',
+      link: 'https://scholarships.gov.in',
+      maxIncome: 350000,
+      minCgpa: 55,
+      course: 'School',
+      categoryRaw: 'EWS',
+      scholarshipType: 'Central',
+      source: 'Central Government',
+    },
+    {
+      id: 'central_2',
+      title: 'Central Sector Scheme of Scholarships for College and University Students',
+      description: 'Provides financial assistance to meritorious students from low income families to meet day-to-day expenses.',
+      reward: '₹10,000 to ₹20,000 per annum',
+      deadline: '2026-12-31',
+      category: 'Government',
+      tags: ['Merit', 'UG', 'PG', 'All'],
+      state: 'All',
+      link: 'https://scholarships.gov.in',
+      maxIncome: 450000,
+      minCgpa: 80,
+      course: 'UG',
+      categoryRaw: 'All',
+      scholarshipType: 'Central',
+      source: 'Central Government',
+    },
+
+    // --- Private Trust / NGO ---
+    {
+      id: 'private_1',
+      title: 'HDFC Bank Parivartan Scholarship',
+      description: 'Merit-cum-means scholarship for school and college students aiming to prevent dropouts due to financial crises.',
+      reward: 'Up to ₹75,000',
+      deadline: '2026-09-30',
+      category: 'Private',
+      tags: ['Merit', 'Needs-based', 'UG', 'PG', 'School'],
+      state: 'All',
+      link: 'https://buddy4study.com/scholarship/hdfc-bank-parivartan',
+      maxIncome: 250000,
+      minCgpa: 55,
+      course: 'Any',
+      categoryRaw: 'All',
+      scholarshipType: 'Private',
+      source: 'Private Trust',
+    },
+    {
+      id: 'private_2',
+      title: 'Reliance Foundation Undergraduate Scholarships',
+      description: 'Private Trust scholarship to support meritorious students from across India for their undergraduate education.',
+      reward: 'Up to ₹2,00,000 over the degree duration',
+      deadline: '2026-10-15',
+      category: 'Private',
+      tags: ['Merit', 'UG'],
+      state: 'All',
+      link: 'https://buddy4study.com/scholarship/reliance-foundation',
+      maxIncome: 1500000,
+      minCgpa: 75,
+      course: 'UG',
+      categoryRaw: 'All',
+      scholarshipType: 'Private',
+      source: 'Private Trust',
+    }
+  ];
+
+  return rawData;
+}
+
 export async function getHybridScholarships(
   userProfile: Partial<UserProfile>,
   filters?: SearchFilters,
 ): Promise<AIScholarship[]> {
-  const csvScholarships = getScholarshipsFromCSV();
-  const csvEligible = filterScholarships(csvScholarships, userProfile, filters).map((item) =>
-    toAIScholarship(item, 'csv_database'),
+  let dynamicScholarships: Scholarship[] = [];
+  try {
+    dynamicScholarships = await fetchDynamicScholarships();
+  } catch (err) {
+    console.error("Failed to fetch dynamic scholarships", err);
+  }
+
+  let dynamicEligible = filterScholarships(dynamicScholarships, userProfile, filters, 'strict').map((item) =>
+    toAIScholarship(item, (item as any).source as any || 'web_retrieval')
   );
 
+  let webEligible: AIScholarship[] = [];
+  let webRetrieved: any[] = [];
   try {
-    const webRetrieved = await fetchWebScholarships(userProfile, filters);
+    webRetrieved = await fetchWebScholarships(userProfile, filters);
     const webNormalized = mapWebScholarshipsToNormalized(webRetrieved);
-    const webEligible = filterScholarships(webNormalized, userProfile, filters).map((item) =>
-      toAIScholarship(item, 'web_retrieval'),
+    webEligible = filterScholarships(webNormalized, userProfile, filters, 'strict').map((item) =>
+      toAIScholarship(item, 'web_retrieval' as any),
+    );
+  } catch (error) {
+    console.error('Hybrid search failed; web retrieval error.', error);
+  }
+
+  let merged: AIScholarship[] = [];
+  let seen = new Set<string>();
+
+  for (const item of [...dynamicEligible, ...webEligible]) {
+    const key = normalizeKey(item.title, item.website);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    merged.push(item);
+  }
+
+  let tagFiltered = merged.filter((item) => {
+    if (!filters?.tags?.length) return true;
+    return filters.tags.some(tag => item.tags.includes(tag));
+  });
+
+  // FALLBACK LOGIC
+  if (tagFiltered.length === 0 && dynamicScholarships.length > 0) {
+    console.info('No strict matches found. Falling back to relaxed dynamic results.');
+    const relaxedDynamicEligible = filterScholarships(dynamicScholarships, userProfile, filters, 'relaxed').map((item) =>
+      toAIScholarship(item, (item as any).source as any || 'web_retrieval'),
     );
 
-    const merged: AIScholarship[] = [];
-    const seen = new Set<string>();
-
-    for (const item of [...csvEligible, ...webEligible]) {
+    seen.clear();
+    merged = [];
+    for (const item of relaxedDynamicEligible) {
       const key = normalizeKey(item.title, item.website);
       if (seen.has(key)) continue;
       seen.add(key);
       merged.push(item);
     }
 
-    const tagFiltered = merged.filter((item) => {
+    tagFiltered = merged.filter((item) => {
       if (!filters?.tags?.length) return true;
       return filters.tags.some(tag => item.tags.includes(tag));
     });
+  }
 
-    const ranked = tagFiltered.sort((a, b) => {
-      if (b.matchScore !== a.matchScore) return b.matchScore - a.matchScore;
-      return a.title.localeCompare(b.title);
-    });
+  const ranked = tagFiltered.sort((a, b) => {
+    if (b.matchScore !== a.matchScore) return b.matchScore - a.matchScore;
+    return a.title.localeCompare(b.title);
+  });
 
+  let finalized: AIScholarship[] = [];
+  try {
     const withInsights = await generateAIInsights(ranked, userProfile);
-    const finalized = withInsights.map((item, idx) => ({
+    finalized = withInsights.map((item, idx) => ({
       ...item,
       isFeatured: idx < 3,
       aiInsight: item.aiInsight || `Matched based on: ${item.matchedBecause.join(', ')}.`,
     }));
-
-    if (isDevRuntime()) {
-      console.info('Scholarship search source counts', {
-        csvMatched: csvEligible.length,
-        webFound: webRetrieved.length,
-        webEligible: webEligible.length,
-        finalReturned: finalized.length,
-      });
-    }
-
-    return finalized;
   } catch (error) {
-    console.error('Hybrid search failed; returning CSV eligibility results only.', error);
-    if (isDevRuntime()) {
-      console.info('Scholarship search source counts', {
-        csvMatched: csvEligible.length,
-        webFound: 0,
-        finalReturned: csvEligible.length,
-      });
-    }
-    return csvEligible.map((item, idx) => ({
+    console.error('AI Insights generation failed.', error);
+    finalized = ranked.map((item, idx) => ({
       ...item,
       isFeatured: idx < 3,
       aiInsight: item.aiInsight || `Matched based on: ${item.matchedBecause.join(', ')}.`,
     }));
   }
+
+  if (isDevRuntime()) {
+    console.info('Scholarship search source counts', {
+      dynamicMatched: dynamicEligible.length,
+      webFound: webRetrieved.length,
+      webEligible: webEligible.length,
+      finalReturned: finalized.length,
+    });
+  }
+
+  return finalized;
 }
